@@ -102,7 +102,7 @@ Each one ends in something you can look at. Sizes assume evenings, not full days
 | --- | --- | --- | --- |
 | D0 | Scaffold: `pipeline/`, `web/`, `data/`, venv, `config.yaml` for backbone and corpus cap | `.venv/bin/python -m pipeline.hello` prints the config | **Done** 2026-09-22 |
 | D1 | Corpus harvest: walk the AIC listing endpoint, keep public-domain works with an image and a date, cache raw JSON | `data/raw/artworks.jsonl` holds ~59k records across all types; re-running is a no-op | **Done** 2026-09-22 |
-| D2 | Taxonomy + normalization: filter to painting-like, period buckets, region lookup, style label set | Coverage report prints % labeled per axis; ~9.6k works out; 50 random rows eyeballed and agreed with | Not started |
+| D2 | Taxonomy + normalization: filter to painting-like, period buckets, region lookup, style label set | Coverage report prints % labeled per axis; ~9.6k works out; 50 random rows eyeballed and agreed with | **Done** 2026-09-22 |
 | D3 | Embeddings: fetch at ~336px, encode with frozen CLIP, save aligned vectors | `embeddings.npy` + id list exist; 5 nearest neighbors of a Monet are other Monets | Not started |
 | D4 | Style classifier: encode WikiArt, train the head, report accuracy and per-class F1 | Confusion matrix saved, and you can explain its worst cell | Not started |
 | D5 | Inference + index: predict style over AIC, compute top-20 KNN and 2D UMAP | `web/public/data/` holds everything the site needs, under ~10 MB | Not started |
@@ -111,9 +111,17 @@ Each one ends in something you can look at. Sizes assume evenings, not full days
 
 **D2 detail**, since it decides whether the site is browsable:
 
-- **Period** — `date_start` / `date_end` into era buckets. Pick 50-year bins or named eras and write the choice down. Drop spans wider than ~100 years.
-- **Location** — a hand-written lookup over the top ~200 `place_of_origin` values covers most of the corpus. Everything else becomes `Unknown`, and the site shows Unknown rather than hiding it.
-- **Style** — the target label set, reconciled against WikiArt's classes. Merge the long tail; 12-18 classes is the right size.
+All three settled 2026-09-22, in `pipeline/taxonomy.py` (tables) and `pipeline/normalize.py` (the stage). Output: 9,132 works in `data/processed/corpus.jsonl`.
+
+- **Period** — 50-year bins, chosen over named eras because ~10% of the corpus is Chinese, Japanese, Indian, Tibetan or Iranian and era names are Eurocentric. Spans wider than 100 years are dropped (459 works, 4.8%).
+
+  **A work belongs to every bin its date range overlaps, not to one bin by midpoint.** Midpoint assignment turned out to be badly skewed: 910 works are dated only to a whole century, and 100% of them landed in the first half, leaving 1700-1749 at 37.6% guesswork against 1750-1799 at 4.5%. Overlap fixes it — 1600-1649 vs 1650-1699 went from 873/686 to 1,324/1,327. Every row also carries `date_precision`: exact (<=10y) 46.7%, loose (11-50y) 27.9%, vague (51-100y) 25.4%. The site must surface that, because 48.5% of works sit in more than one bin.
+
+- **Location** — normalized to present-day countries. The tail was far shorter than feared: only **129 distinct `place_of_origin` values**, so all 129 are mapped by hand and nothing falls through by accident. Coverage is 99.8%; 15 works are genuinely unknown. Six names ambiguous between England and New England (`Bath`, `Lancaster`, `Greenwich`, `Ipswich`, `Gloucester`, `Boston`) were each checked against the records and all six are American. `Europe` and `Middle East` are kept as explicit "unspecified" values rather than folded into Unknown. Tibet is deliberately not folded into China.
+
+- **Style** — 17 labels, mapped from WikiArt's 27 classes (verified against the HuggingFace dataset info, not recalled). Pointillism merges into Post-Impressionism; Analytical and Synthetic Cubism into Cubism. Seven postwar classes (Abstract Expressionism, Action painting, Color Field, Contemporary Realism, Minimalism, New Realism, Pop Art) are **dropped, not merged** — the corpus is public domain and therefore ~95% pre-1900, so a head that never sees Pop Art cannot predict it for an 1870 landscape.
+
+**Watch-out for D5/D6:** `artist_title` flattens attribution — "After Raffaello Sanzio, called Raphael" becomes plain `Raphael`, putting 18th-century copies under a painter who died in 1520. `artist_display` keeps the qualifier, so the site should show that field, not `artist_title`.
 
 **D3 is the only compute-heavy step, and it runs elsewhere.** Write it as a self-contained, batched, resumable script that takes the D2 output and depends on nothing else in the local environment. It should run unattended in Colab or on a remote box, and `embeddings.npy` plus the id list should be the only things you copy back. Pin the backbone name and image size in `config.yaml` so the remote run and the local corpus can never drift apart.
 
