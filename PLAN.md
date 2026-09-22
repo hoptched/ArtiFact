@@ -35,6 +35,8 @@ Scope cap: **~9.6k painting-like works** with a public-domain image and a parsea
 | *painting-like total* | *9,591* |
 | *all types* | *~59,000* |
 
+Harvested 2026-09-22: 58,787 records, of which 9,591 are painting-like — matching the API's own aggregation exactly.
+
 Decided 2026-09-22: painting-like only. Prints are the tempting 24.6k, but AIC's prints are mostly Japanese ukiyo-e and European etchings — far outside WikiArt's domain, so the style head would be guessing on two thirds of the corpus. A smaller corpus whose labels mean something beats a large one whose labels do not.
 
 | Dataset | Size | Style labels | Date / place | Images hostable |
@@ -99,7 +101,7 @@ Each one ends in something you can look at. Sizes assume evenings, not full days
 | # | Deliverable | Done when | Status |
 | --- | --- | --- | --- |
 | D0 | Scaffold: `pipeline/`, `web/`, `data/`, venv, `config.yaml` for backbone and corpus cap | `.venv/bin/python -m pipeline.hello` prints the config | **Done** 2026-09-22 |
-| D1 | Corpus harvest: walk the AIC listing endpoint, keep public-domain works with an image and a date, cache raw JSON | `data/raw/artworks.jsonl` holds ~59k records across all types; re-running is a no-op | In progress |
+| D1 | Corpus harvest: walk the AIC listing endpoint, keep public-domain works with an image and a date, cache raw JSON | `data/raw/artworks.jsonl` holds ~59k records across all types; re-running is a no-op | **Done** 2026-09-22 |
 | D2 | Taxonomy + normalization: filter to painting-like, period buckets, region lookup, style label set | Coverage report prints % labeled per axis; ~9.6k works out; 50 random rows eyeballed and agreed with | Not started |
 | D3 | Embeddings: fetch at ~336px, encode with frozen CLIP, save aligned vectors | `embeddings.npy` + id list exist; 5 nearest neighbors of a Monet are other Monets | Not started |
 | D4 | Style classifier: encode WikiArt, train the head, report accuracy and per-class F1 | Confusion matrix saved, and you can explain its worst cell | Not started |
