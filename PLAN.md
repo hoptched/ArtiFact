@@ -1,10 +1,10 @@
-# Art-CNN: Build Tracker
+# ArtiFact: Build Tracker
 
 As of 2026-09-22. Living version: https://claude.ai/code/artifact/7102f034-87f7-4100-b6e0-406c2a2b376f
 
 ## The project in one page
 
-Art-CNN labels artworks by time period, location and art style, then makes that browsable on a static website. Two systems meet at a file boundary: an offline Python pipeline that produces frozen data artifacts, and a website that reads only those artifacts. The website never imports torch.
+ArtiFact labels artworks by time period, location and art style, then makes that browsable on a static website. Two systems meet at a file boundary: an offline Python pipeline that produces frozen data artifacts, and a website that reads only those artifacts. The website never imports torch.
 
 The three axes are not equally hard, and that asymmetry drives every choice below.
 
@@ -51,7 +51,7 @@ Run the expensive step once, cache the vectors, and a head trains in seconds on 
 
 Rejected: end-to-end ResNet-50 or ViT fine-tuning (GPU hours, one softmax, rigid), CLIP zero-shot alone (weaker, no taxonomy control), DINOv2 (great features, no text alignment).
 
-**On the repo name:** a frozen ViT plus a trained head is a neural net but not a CNN. If you want the CNN for its own sake, train a ResNet-50 baseline on the same WikiArt split in D4 and report both numbers. That comparison is the most interesting paragraph in any eventual writeup — keep it as a baseline, not the product.
+**On the CNN baseline:** the original `Art-CNN` name implied an architecture this design does not use; renaming to ArtiFact settles that. The baseline is still worth having — train a ResNet-50 on the same WikiArt split in D4 and report both numbers. That comparison is the most interesting paragraph in any eventual writeup — keep it as a baseline, not the product.
 
 ## Architecture
 
@@ -98,15 +98,15 @@ Each one ends in something you can look at. Sizes assume evenings, not full days
 - **Location** — a hand-written lookup over the top ~200 `place_of_origin` values covers most of the corpus. Everything else becomes `Unknown`, and the site shows Unknown rather than hiding it.
 - **Style** — the target label set, reconciled against WikiArt's classes. Merge the long tail; 12-18 classes is the right size.
 
-**D3 is the only compute-heavy step**: a few hours on CPU, minutes on a GPU, or one free Colab session. Make it batched and resumable.
+**D3 is the only compute-heavy step, and it runs elsewhere.** Write it as a self-contained, batched, resumable script that takes the D2 output and depends on nothing else in the local environment. It should run unattended in Colab or on a remote box, and `embeddings.npy` plus the id list should be the only things you copy back. Pin the backbone name and image size in `config.yaml` so the remote run and the local corpus can never drift apart.
 
 **D6 minimum views**: a grid filtered on period x region x style with a confidence toggle; a detail page with the large IIIF image, all metadata, the predicted style clearly marked as predicted, and a visually-similar row from the KNN; and one of timeline or map, not both.
 
 ## Open questions
 
-Two answers change how D3 and D1 are sized. Neither blocks starting D0.
+Compute is settled. One answer still changes how D1 is sized, and neither blocks starting D0.
 
-- [ ] **Is there a usable GPU in this WSL2 setup?** Decides whether D3 is a coffee break or a Colab notebook.
+- [x] **Compute for D3** — answered 2026-09-22: available off this machine. So D3 ships as a standalone script, not something tied to the local env.
 - [ ] **Public site or local only?** If local only, WikiArt alone becomes viable as the corpus and D1 and D2 get much simpler.
 - [ ] **Period buckets: 50-year bins or named eras?** Needs deciding inside D2, not before.
 

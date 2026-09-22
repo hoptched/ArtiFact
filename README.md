@@ -1,1 +1,1 @@
-# Art-CNN
+# ArtiFact

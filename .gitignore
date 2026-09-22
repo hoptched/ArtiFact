@@ -1,0 +1,30 @@
+# Derived data — the pipeline reproduces all of this
+data/
+*.npy
+*.npz
+
+# Trained heads and checkpoints
+*.pt
+*.pth
+*.pkl
+*.joblib
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.pytest_cache/
+
+# Node / site build
+node_modules/
+web/dist/
+
+# Env and OS
+.env
+.DS_Store
+
+# Exception: site artifacts are derived but must be committed for a static
+# deploy. Capped at ~10 MB by design; commit them on their own, never mixed
+# with code changes.
+!web/public/data/
