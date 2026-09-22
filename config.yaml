@@ -3,10 +3,20 @@
 
 corpus:
   source: artic              # artic | met — D2 normalizes both to one schema
-  max_works: 25000           # scope cap from PLAN.md
+  # D1 harvests every public-domain work with an image and a date (~59k) and
+  # leaves type filtering to D2, so this cap and the type list below can
+  # change without another 25-minute API walk.
+  max_works: 10000           # cap on the corpus D2 emits, not on the harvest
   iiif_width: 400            # px requested from AIC's IIIF endpoint
   max_span_years: 100        # drop works whose date range is vaguer than this
   painting_like_only: true   # keep the corpus close to WikiArt's domain
+  # What "painting-like" means, as AIC's artwork_type_title spells it.
+  # Prints are AIC's largest public-domain category (~24.6k) but sit far
+  # from WikiArt's painting domain, so they are out by default.
+  painting_like_types:
+    - Painting
+    - Drawing and Watercolor
+    - Miniature Painting
 
 model:
   backbone: openai/clip-vit-base-patch32

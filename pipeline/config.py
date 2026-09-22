@@ -24,6 +24,7 @@ class CorpusConfig:
     iiif_width: int
     max_span_years: int
     painting_like_only: bool
+    painting_like_types: list[str]
 
 
 @dataclass(frozen=True)
