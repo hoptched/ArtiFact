@@ -75,7 +75,7 @@ WikiArt enters only at D4, and only as training data — it never reaches the si
 
 **Ship precomputed neighbors, not raw embeddings.** 25k x 512 floats is ~50 MB in the browser; 25k rows of top-20 neighbor ids is under 5 MB. Compute the KNN once in D5.
 
-**Stack.** Pipeline: Python 3.11 with `uv`, `transformers`, `torch`, `polars`, `scikit-learn`, `umap-learn`. Site: Vite + React + TypeScript, static export, no server.
+**Stack.** Pipeline: Python 3.12 with `venv` and `pip`, `transformers`, `torch`, `polars`, `scikit-learn`, `umap-learn`. Site: Vite + React + TypeScript, static export, no server.
 
 ## Deliverables
 
@@ -83,7 +83,7 @@ Each one ends in something you can look at. Sizes assume evenings, not full days
 
 | # | Deliverable | Done when | Status |
 | --- | --- | --- | --- |
-| D0 | Scaffold: `pipeline/`, `web/`, `data/`, `uv` env, `config.yaml` for backbone and corpus cap | `uv run python -m pipeline.hello` prints the config | Not started |
+| D0 | Scaffold: `pipeline/`, `web/`, `data/`, venv, `config.yaml` for backbone and corpus cap | `.venv/bin/python -m pipeline.hello` prints the config | **Done** 2026-09-22 |
 | D1 | Corpus harvest: page the AIC API for public-domain works with an image, cache raw JSON | `data/raw/artworks.jsonl` holds ~20-25k records; re-running is a no-op | Not started |
 | D2 | Taxonomy + normalization: period buckets, region lookup, style label set | Coverage report prints % labeled per axis; 50 random rows eyeballed and agreed with | Not started |
 | D3 | Embeddings: fetch at ~336px, encode with frozen CLIP, save aligned vectors | `embeddings.npy` + id list exist; 5 nearest neighbors of a Monet are other Monets | Not started |

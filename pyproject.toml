@@ -1,0 +1,22 @@
+[project]
+name = "artifact"
+version = "0.1.0"
+description = "Label artworks by period, location and style, and make them browsable"
+requires-python = ">=3.11"
+dependencies = [
+    "pyyaml>=6.0",
+]
+
+# Heavier stages pull their own deps, so D0 stays installable in seconds.
+# Install with: .venv/bin/pip install -e ".[<name>]"
+[project.optional-dependencies]
+harvest = ["httpx>=0.27", "polars>=1.0"]
+embed = ["torch>=2.2", "transformers>=4.40", "pillow>=10.0", "numpy>=1.26"]
+train = ["scikit-learn>=1.4", "umap-learn>=0.5"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["pipeline"]

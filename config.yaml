@@ -1,0 +1,29 @@
+# Single source of truth for the pipeline. Every stage reads this file;
+# nothing hardcodes a model name, a size or a path.
+
+corpus:
+  source: artic              # artic | met — D2 normalizes both to one schema
+  max_works: 25000           # scope cap from PLAN.md
+  iiif_width: 400            # px requested from AIC's IIIF endpoint
+  max_span_years: 100        # drop works whose date range is vaguer than this
+  painting_like_only: true   # keep the corpus close to WikiArt's domain
+
+model:
+  backbone: openai/clip-vit-base-patch32
+  image_size: 224            # the backbone's native input
+  batch_size: 64
+  embed_dim: 512
+
+taxonomy:
+  period_scheme: fifty_year_bins   # fifty_year_bins | named_eras (open question, decided in D2)
+  unknown_label: Unknown
+
+site:
+  neighbors_per_work: 20     # top-k shipped to the browser instead of raw vectors
+  max_bundle_mb: 10
+
+paths:
+  raw: data/raw
+  interim: data/interim
+  processed: data/processed
+  site_data: web/public/data
