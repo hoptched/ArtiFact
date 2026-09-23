@@ -212,7 +212,9 @@ def main() -> None:
                 if name in centres],
             "region_of": labels,
         }
-        print(f"  layout {facet:<8} {len(sizes):>3} regions")
+        drawn = sum(1 for n in sizes if n in centres)
+        print(f"  layout {facet:<10} {drawn:>3} regions"
+              + ("  (position is the embedding alone)" if not drawn else ""))
     # --- pack order for the lazily-loaded high-resolution atlas ----------
     # Hilbert order through the UMAP plane, so a screenful of the map lives
     # in a few sheets rather than all of them: measured 3.5 sheets against
