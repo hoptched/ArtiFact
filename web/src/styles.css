@@ -224,7 +224,7 @@ dd { margin: 0; font-size: 0.97rem; }
   border-radius: 6px;
   cursor: pointer;
 }
-.regions .reset:hover { color: var(--ink); border-color: var(--muted); }
+.regions .reset:hover { color: var(--ink); background: rgba(255, 255, 255, 0.1); }
 
 @media (max-width: 700px) {
   .regions { display: none; }
