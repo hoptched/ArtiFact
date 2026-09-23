@@ -1,0 +1,366 @@
+{
+  "periods": [
+    {
+      "bin": 500,
+      "label": "500–549",
+      "count": 1
+    },
+    {
+      "bin": 550,
+      "label": "550–599",
+      "count": 1
+    },
+    {
+      "bin": 600,
+      "label": "600–649",
+      "count": 1
+    },
+    {
+      "bin": 1000,
+      "label": "1000–1049",
+      "count": 1
+    },
+    {
+      "bin": 1050,
+      "label": "1050–1099",
+      "count": 2
+    },
+    {
+      "bin": 1100,
+      "label": "1100–1149",
+      "count": 3
+    },
+    {
+      "bin": 1150,
+      "label": "1150–1199",
+      "count": 4
+    },
+    {
+      "bin": 1200,
+      "label": "1200–1249",
+      "count": 8
+    },
+    {
+      "bin": 1250,
+      "label": "1250–1299",
+      "count": 17
+    },
+    {
+      "bin": 1300,
+      "label": "1300–1349",
+      "count": 58
+    },
+    {
+      "bin": 1350,
+      "label": "1350–1399",
+      "count": 56
+    },
+    {
+      "bin": 1400,
+      "label": "1400–1449",
+      "count": 86
+    },
+    {
+      "bin": 1450,
+      "label": "1450–1499",
+      "count": 182
+    },
+    {
+      "bin": 1500,
+      "label": "1500–1549",
+      "count": 481
+    },
+    {
+      "bin": 1550,
+      "label": "1550–1599",
+      "count": 824
+    },
+    {
+      "bin": 1600,
+      "label": "1600–1649",
+      "count": 1317
+    },
+    {
+      "bin": 1650,
+      "label": "1650–1699",
+      "count": 1320
+    },
+    {
+      "bin": 1700,
+      "label": "1700–1749",
+      "count": 1454
+    },
+    {
+      "bin": 1750,
+      "label": "1750–1799",
+      "count": 2151
+    },
+    {
+      "bin": 1800,
+      "label": "1800–1849",
+      "count": 2833
+    },
+    {
+      "bin": 1850,
+      "label": "1850–1899",
+      "count": 2778
+    },
+    {
+      "bin": 1900,
+      "label": "1900–1949",
+      "count": 476
+    },
+    {
+      "bin": 1950,
+      "label": "1950–1999",
+      "count": 4
+    }
+  ],
+  "countries": [
+    {
+      "name": "United Kingdom",
+      "count": 2334
+    },
+    {
+      "name": "France",
+      "count": 2116
+    },
+    {
+      "name": "Italy",
+      "count": 1947
+    },
+    {
+      "name": "United States",
+      "count": 622
+    },
+    {
+      "name": "Netherlands",
+      "count": 570
+    },
+    {
+      "name": "Belgium",
+      "count": 301
+    },
+    {
+      "name": "Germany",
+      "count": 291
+    },
+    {
+      "name": "China",
+      "count": 193
+    },
+    {
+      "name": "Japan",
+      "count": 162
+    },
+    {
+      "name": "India",
+      "count": 98
+    },
+    {
+      "name": "Spain",
+      "count": 93
+    },
+    {
+      "name": "Europe (unspecified)",
+      "count": 82
+    },
+    {
+      "name": "Switzerland",
+      "count": 48
+    },
+    {
+      "name": "Sweden",
+      "count": 41
+    },
+    {
+      "name": "Iran",
+      "count": 34
+    },
+    {
+      "name": "Austria",
+      "count": 33
+    },
+    {
+      "name": "Ireland",
+      "count": 30
+    },
+    {
+      "name": "Tibet",
+      "count": 19
+    },
+    {
+      "name": "Unknown",
+      "count": 15
+    },
+    {
+      "name": "Nepal",
+      "count": 13
+    },
+    {
+      "name": "Denmark",
+      "count": 12
+    },
+    {
+      "name": "Norway",
+      "count": 9
+    },
+    {
+      "name": "Hungary",
+      "count": 8
+    },
+    {
+      "name": "Greece",
+      "count": 7
+    },
+    {
+      "name": "Czech Republic",
+      "count": 6
+    },
+    {
+      "name": "Korea",
+      "count": 4
+    },
+    {
+      "name": "Uzbekistan",
+      "count": 3
+    },
+    {
+      "name": "Russia",
+      "count": 2
+    },
+    {
+      "name": "Mongolia",
+      "count": 2
+    },
+    {
+      "name": "Mexico",
+      "count": 1
+    },
+    {
+      "name": "Afghanistan",
+      "count": 1
+    },
+    {
+      "name": "Australia",
+      "count": 1
+    },
+    {
+      "name": "Egypt",
+      "count": 1
+    },
+    {
+      "name": "Ethiopia",
+      "count": 1
+    },
+    {
+      "name": "Finland",
+      "count": 1
+    }
+  ],
+  "styles": [
+    {
+      "name": "Baroque",
+      "count": 2047
+    },
+    {
+      "name": "Romanticism",
+      "count": 1158
+    },
+    {
+      "name": "Rococo",
+      "count": 973
+    },
+    {
+      "name": "Realism",
+      "count": 709
+    },
+    {
+      "name": "Art Nouveau",
+      "count": 685
+    },
+    {
+      "name": "Northern Renaissance",
+      "count": 590
+    },
+    {
+      "name": "High Renaissance",
+      "count": 583
+    },
+    {
+      "name": "Outside the taxonomy",
+      "count": 385
+    },
+    {
+      "name": "Naive Art",
+      "count": 365
+    },
+    {
+      "name": "Early Renaissance",
+      "count": 343
+    },
+    {
+      "name": "Post-Impressionism",
+      "count": 269
+    },
+    {
+      "name": "Mannerism",
+      "count": 244
+    },
+    {
+      "name": "Ukiyo-e",
+      "count": 197
+    },
+    {
+      "name": "Symbolism",
+      "count": 182
+    },
+    {
+      "name": "Expressionism",
+      "count": 167
+    },
+    {
+      "name": "Impressionism",
+      "count": 166
+    },
+    {
+      "name": "Cubism",
+      "count": 24
+    },
+    {
+      "name": "Fauvism",
+      "count": 14
+    }
+  ],
+  "outside_taxonomy_label": "Outside the taxonomy",
+  "style_domain_note": "Style is predicted only for works from traditions the 17-label taxonomy covers: European painting and Japanese ukiyo-e. Elsewhere it is withheld, because the model is confidently wrong rather than uncertain.",
+  "style_labels": [
+    "Art Nouveau",
+    "Baroque",
+    "Cubism",
+    "Early Renaissance",
+    "Expressionism",
+    "Fauvism",
+    "High Renaissance",
+    "Impressionism",
+    "Mannerism",
+    "Naive Art",
+    "Northern Renaissance",
+    "Post-Impressionism",
+    "Realism",
+    "Rococo",
+    "Romanticism",
+    "Symbolism",
+    "Ukiyo-e"
+  ],
+  "precision_levels": [
+    "exact",
+    "loose",
+    "vague"
+  ],
+  "iiif": "https://www.artic.edu/iiif/2/{image_id}/full/{width},/0/default.jpg",
+  "counts": {
+    "works": 9101,
+    "neighbors_per_work": 20
+  }
+}
