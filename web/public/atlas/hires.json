@@ -1,0 +1,12 @@
+{
+  "tile": 192,
+  "sheet_px": 1920,
+  "grid": 10,
+  "per_sheet": 100,
+  "sheets": 92,
+  "count": 9130,
+  "missing": 0,
+  "prefix": "hires",
+  "ordered": true,
+  "note": "tile index == position in the pack order; sheet = i // per_sheet, col = i % grid, row = (i % per_sheet) // grid"
+}
