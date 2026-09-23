@@ -96,6 +96,12 @@ def dominant_color(img, np) -> tuple[int, int, int]:
     return tuple(int(round(c * 255)) for c in srgb.clip(0, 1))
 
 
+# Backing off silently is indistinguishable from a hang, which is exactly
+# how it looked after several full runs in a row made AIC start throttling.
+# Counted here and reported by the progress line instead.
+THROTTLED = {"n": 0}
+
+
 def fetch(session, image_id: str, width: int, cache: Path, retries: int = 3):
     """Bytes for one image, from the cache if present. None if it fails."""
     cached = cache / f"{image_id}.jpg"
@@ -106,9 +112,11 @@ def fetch(session, image_id: str, width: int, cache: Path, retries: int = 3):
         try:
             resp = session.get(url, timeout=60.0)
         except Exception:
+            THROTTLED["n"] += 1
             time.sleep(2 ** attempt)
             continue
         if resp.status_code == 429 or resp.status_code >= 500:
+            THROTTLED["n"] += 1
             time.sleep(2 ** attempt + 1)
             continue
         if resp.status_code != 200:
@@ -250,8 +258,10 @@ def main() -> None:
             done = start + len(batch)
             rate = done / max(time.time() - started, 1e-6)
             eta = (len(todo) - done) / max(rate, 1e-6)
+            waits = THROTTLED["n"]
             print(f"  {done:>6,}/{len(todo):,}  {rate:5.1f} img/s  "
-                  f"eta {eta/60:5.1f} min  failed {failed}")
+                  f"eta {eta/60:5.1f} min  failed {failed}"
+                  + (f"  backed off {waits}x" if waits else ""))
         flush()
 
     # --- merge shards into the aligned pair D4 and D5 consume -------------
