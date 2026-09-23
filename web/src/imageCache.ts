@@ -1,8 +1,11 @@
 import { iiifUrl } from "./types";
 
-// Above this many pixels per tile, a 32px atlas sprite is visibly blocky
-// and the work deserves a real image.
-export const TIER2_MIN_PX = 26;
+// Above this many pixels per tile the atlas sprite is visibly blocky and
+// the work deserves a real image. Tied to the sprite's own resolution:
+// with 64px tiles a sprite carries comfortably to ~56px on screen, so
+// mid-zoom panning needs no network at all. The atlas manifest supplies
+// the real tile size at runtime; this is the fallback.
+export const TIER2_MIN_PX = 56;
 
 // Two buckets rather than a continuous size, so panning around at a given
 // zoom reuses what is already cached instead of requesting a new width

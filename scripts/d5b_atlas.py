@@ -42,11 +42,13 @@ IIIF = "https://www.artic.edu/iiif/2/{image_id}/full/{width},/0/default.jpg"
 IIIF_CONFINED = ("https://www.artic.edu/iiif/2/{image_id}"
                  "/full/!{width},{width}/0/default.jpg")
 
-SHEET_PX = 2048
+DEFAULT_SHEET_PX = 2048
+# Matches the map's canvas, so letterbox padding is invisible.
+BACKGROUND = (13, 13, 15)
 FETCH_WIDTH = 200          # plenty for a 32px tile, cheap if we must fetch
 
 
-def square(img, size: int, background=(13, 13, 15)):
+def square(img, size: int, background=BACKGROUND):
     """Fit the whole work inside a square cell, centred, without cropping.
 
     Contain rather than cover. A cover-crop keeps the mosaic perfectly
@@ -72,13 +74,20 @@ def main() -> None:
                     help="corpus.jsonl; maps a work id to its IIIF image id")
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--cache", type=Path, help="D3's image cache, if still warm")
-    ap.add_argument("--tile", type=int, default=32)
+    # 64px, not 32. A 32px sprite is visibly blocky once a tile passes
+    # about 26px on screen, which is most of the time you are actually
+    # looking at the map, so every one of those tiles had to wait on a
+    # network round-trip to sharpen. At 64px the sprite carries to ~56px
+    # on screen and mid-zoom needs no network at all. Costs ~4x the bytes
+    # and the same decoded memory per pixel shown.
+    ap.add_argument("--tile", type=int, default=64)
+    ap.add_argument("--sheet-px", type=int, default=DEFAULT_SHEET_PX)
     ap.add_argument("--quality", type=int, default=82)
     ap.add_argument("--workers", type=int, default=8)
     args = ap.parse_args()
 
     ids = json.loads(args.ids.read_text())
-    grid = SHEET_PX // args.tile
+    grid = args.sheet_px // args.tile
     per_sheet = grid * grid
     sheets = (len(ids) + per_sheet - 1) // per_sheet
     args.out.mkdir(parents=True, exist_ok=True)
@@ -131,7 +140,7 @@ def main() -> None:
     with ThreadPoolExecutor(max_workers=args.workers) as pool:
         for sheet in range(sheets):
             chunk = ids[sheet * per_sheet:(sheet + 1) * per_sheet]
-            canvas = Image.new("RGB", (SHEET_PX, SHEET_PX), (17, 17, 17))
+            canvas = Image.new("RGB", (args.sheet_px, args.sheet_px), BACKGROUND)
             for n, (artwork_id, blob) in enumerate(zip(chunk,
                                                        pool.map(load, chunk))):
                 if blob is None:
@@ -151,7 +160,7 @@ def main() -> None:
 
     (args.out / "atlas.json").write_text(json.dumps({
         "tile": args.tile,
-        "sheet_px": SHEET_PX,
+        "sheet_px": args.sheet_px,
         "grid": grid,
         "per_sheet": per_sheet,
         "sheets": sheets,

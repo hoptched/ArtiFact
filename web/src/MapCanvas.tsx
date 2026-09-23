@@ -122,7 +122,10 @@ export function MapCanvas({
 
       // Past this size an atlas sprite is visibly blocky, so ask IIIF for
       // the real thing. Only visible works are ever requested.
-      const wantReal = size >= TIER2_MIN_PX;
+      // Derive the switch point from the atlas actually loaded rather than
+      // a constant, so re-running D5b at a different tile size needs no
+      // client change.
+      const wantReal = size >= Math.max(TIER2_MIN_PX, tile * 0.9);
 
       for (let i = 0; i < works.length; i++) {
         const px = (pos[i * 2] - vx) * s + cx;
