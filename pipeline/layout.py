@@ -188,11 +188,16 @@ def _period_sort_key(label: str) -> int:
         return 9999
     return int(label.split("\u2013")[0])
 ARC_SWEEP = 1.5 * np.pi     # 270 degrees, so the two ends never meet
+# Adjacent bins are drawn closer than their radii, so their clouds
+# interpenetrate. A century boundary is a convention, not a rupture: 1599
+# and 1600 look alike, and the map should say so.
+ARC_OVERLAP = 0.74
 
 
 def arc_centres(mds: dict[str, np.ndarray], sizes: dict[str, int],
                 earliest_first: list[str] | None = None,
-                ) -> tuple[dict[str, np.ndarray], dict[str, float]]:
+                ) -> tuple[dict[str, np.ndarray], dict[str, float],
+                           dict[str, np.ndarray]]:
     """Place regions along an arc, ordered by the first similarity axis.
 
     For period the similarity structure is 93% one-dimensional and that
@@ -230,19 +235,25 @@ def arc_centres(mds: dict[str, np.ndarray], sizes: dict[str, int],
     total = sum(sizes.values())
     rad = {n: DISC_R * np.sqrt(sizes[n] / total) for n in names}
 
-    # Walk the arc, giving each region room for its own diameter.
-    length = 2.0 * sum(rad.values())
+    # Walk the arc. Regions are spaced at less than their own diameter so
+    # neighbouring bins interpenetrate rather than sitting as separate
+    # bubbles with a gap between them.
+    length = 2.0 * ARC_OVERLAP * sum(rad.values())
     radius = length / ARC_SWEEP
     centres: dict[str, np.ndarray] = {}
+    tangents: dict[str, np.ndarray] = {}
     travelled = 0.0
     for i in order:
         name = names[i]
-        travelled += rad[name]
+        travelled += rad[name] * ARC_OVERLAP
         theta = ARC_SWEEP * (travelled / length) - ARC_SWEEP / 2
         centres[name] = np.array([radius * np.sin(theta),
                                   -radius * np.cos(theta)])
-        travelled += rad[name]
-    return centres, rad
+        # Direction of travel along the arc, so a region can lay its works
+        # out chronologically across its own width.
+        tangents[name] = np.array([np.cos(theta), np.sin(theta)])
+        travelled += rad[name] * ARC_OVERLAP
+    return centres, rad, tangents
 
 
 def pack_regions(centres: dict[str, np.ndarray], sizes: dict[str, int],
@@ -309,7 +320,9 @@ def pack_regions(centres: dict[str, np.ndarray], sizes: dict[str, int],
 
 
 def place(xy_local: np.ndarray, labels: list[str],
-          centres: dict[str, np.ndarray], radii: dict[str, float]) -> np.ndarray:
+          centres: dict[str, np.ndarray], radii: dict[str, float],
+          tangents: dict[str, np.ndarray] | None = None,
+          along_key: np.ndarray | None = None) -> np.ndarray:
     """Work positions: region centre plus the work's own offset within it.
 
     The offset is the work's UMAP position, so visually similar works sit
@@ -323,7 +336,24 @@ def place(xy_local: np.ndarray, labels: list[str],
         extent = np.abs(local).max()
         if extent > 0:
             local = local / extent
-        out[mask] = centre + local * radii[name] * 0.92
+
+        if tangents is None or along_key is None:
+            out[mask] = centre + local * radii[name] * 0.92
+            continue
+
+        # Along the arc: rank by date, so the works meeting at a seam are
+        # the ones whose dates meet. Across it: the embedding, unchanged.
+        # A bin's internal spread stops being an arbitrary crop of the
+        # UMAP plane and becomes the passage of time through that
+        # half-century.
+        u = tangents[name]
+        perp = np.array([-u[1], u[0]])
+        rank = np.argsort(np.argsort(along_key[mask])).astype(np.float64)
+        along = (rank / max(len(rank) - 1, 1) - 0.5) * 2.0
+        across = local @ perp
+        out[mask] = (centre
+                     + np.outer(along * radii[name], u)
+                     + np.outer(across * radii[name] * 0.62, perp))
     return out
 
 
@@ -380,11 +410,14 @@ def build(vecs: np.ndarray, works: list[dict], facet: str) -> tuple:
         sizes[l] = sizes.get(l, 0) + 1
 
     mds = region_centres(vecs, labels)
+    tangents = None
+    along_key = None
     if facet in ARC_FACETS:
-        # Already non-overlapping by construction, so no packing pass —
-        # which is what was displacing regions and muddying the axis.
-        centres, radii = arc_centres(
+        # No packing pass: the arc already spaces them, and packing was
+        # what displaced regions and muddied the axis.
+        centres, radii, tangents = arc_centres(
             mds, sizes, earliest_first=sorted(sizes, key=_period_sort_key))
+        along_key = np.array([w.get("my", 0) for w in works], dtype=np.float64)
     else:
         centres, radii = pack_regions(mds, sizes)
 
@@ -399,7 +432,8 @@ def build(vecs: np.ndarray, works: list[dict], facet: str) -> tuple:
     # during relaxation as it does to the client. Normalizing afterwards
     # rescales every distance and silently undoes the spacing just applied.
     pos, centres, radii = to_unit(
-        place(xy_local, labels, centres, radii), centres, radii)
+        place(xy_local, labels, centres, radii, tangents, along_key),
+        centres, radii)
     pos = relax(pos, radius=work_radius(len(labels)))
     pos, centres, radii = to_unit(pos, centres, radii)
     return pos, centres, radii, labels

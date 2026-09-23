@@ -7,8 +7,9 @@ import type { Facet } from "./types";
 
 const facetNote: Record<Facet, string> = {
   similarity: "Position is the image alone. Neighbours look alike.",
-  period: "Follow the arc: regions are ordered by how their works look, "
-    + "not by date — and that order turns out to be chronological.",
+  period: "A continuous timeline. Bins are ordered by how their works "
+    + "look, not by date — that order turns out to be chronological — and "
+    + "within each, works run oldest to newest along the arc.",
   country: "Regions are present-day countries, placed by how their works look.",
   style: "Regions are predicted styles. 387 works sit outside the taxonomy.",
 };

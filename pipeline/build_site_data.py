@@ -147,6 +147,9 @@ def main() -> None:
             "img": r["image_id"],
             "d": r.get("date_display"),
             "pb": r["period_bins"],
+            # Midpoint year: the period arc uses it to order works inside a
+            # bin, so the seam between two bins is where their dates meet.
+            "my": (r["date_start"] + r["date_end"]) // 2,
             "p": r["period"],
             "prec": r["date_precision"],
             "c": r["country"],
