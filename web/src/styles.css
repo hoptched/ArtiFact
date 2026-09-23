@@ -5,8 +5,9 @@
   --ink: #ece9e4;
   --muted: #9a958d;
   --accent: #f5c451;
-  /* Swap this one line for a licensed Orpheus and everything follows. */
+  /* The wordmark only. Swap this line for a licensed Orpheus. */
   --font-display: "Cormorant Garamond", "Orpheus Pro", Georgia, serif;
+  --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   color-scheme: dark;
 }
 
@@ -17,9 +18,7 @@ html, body, #root { height: 100%; margin: 0; }
 body {
   background: var(--bg);
   color: var(--ink);
-  /* Cormorant runs small and light, so it needs more size and a touch
-     more weight than a sans would at the same rank. */
-  font: 400 17px/1.55 var(--font-display);
+  font: 15px/1.5 var(--font-ui);
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
 }
@@ -42,22 +41,25 @@ body {
   overflow: hidden;
 }
 
+/* The one thing still set in the display face. */
 .sidebar header h1 {
   margin: 0;
-  font-size: 1.55rem;
+  font-family: var(--font-display);
+  font-size: 1.9rem;
   font-weight: 600;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.015em;
+  line-height: 1.1;
 }
 .sidebar header p {
-  margin: 6px 0 0;
+  margin: 8px 0 0;
   color: var(--muted);
-  font-size: 0.92rem;
+  font-size: 0.8rem;
   line-height: 1.45;
 }
 
 .sidebar h2 {
   margin: 0 0 8px;
-  font-size: 0.78rem;
+  font-size: 0.68rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.12em;
@@ -70,7 +72,7 @@ body {
   border: none;
   color: var(--muted);
   font: inherit;
-  font-size: 0.92rem;
+  font-size: 0.82rem;
   padding: 5px 12px;
   border-radius: 7px;
   cursor: pointer;
@@ -81,9 +83,8 @@ body {
 .group .hint {
   margin: 10px 0 0;
   color: var(--muted);
-  font-size: 0.86rem;
+  font-size: 0.76rem;
   line-height: 1.5;
-  font-style: italic;
 }
 
 .regions {
@@ -110,7 +111,7 @@ body {
   border: none;
   color: var(--ink);
   font: inherit;
-  font-size: 0.92rem;
+  font-size: 0.82rem;
   text-align: left;
   padding: 3px 6px;
   border-radius: 6px;
@@ -118,7 +119,7 @@ body {
 }
 .regions ul button:hover { background: rgba(255, 255, 255, 0.07); }
 .regions ul button em {
-  font-style: normal; color: var(--muted); font-size: 0.82rem;
+  font-style: normal; color: var(--muted); font-size: 0.73rem;
 }
 
 .sidebar .reset {
@@ -126,7 +127,7 @@ body {
   border: none;
   color: var(--muted);
   font: inherit;
-  font-size: 0.86rem;
+  font-size: 0.78rem;
   padding: 7px;
   border-radius: 7px;
   cursor: pointer;
@@ -185,11 +186,11 @@ body {
   display: block;
   margin-bottom: 14px;
 }
-.detail h2 { margin: 0 0 4px; font-weight: 600; line-height: 1.25; font-size: 1.35rem; line-height: 1.3; }
-.detail .artist { margin: 0 0 14px; color: var(--muted); font-size: 0.97rem; }
+.detail h2 { margin: 0 0 3px; font-size: 1.05rem; line-height: 1.3; }
+.detail .artist { margin: 0 0 14px; color: var(--muted); font-size: 0.85rem; }
 .detail h3 {
   margin: 22px 0 8px;
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.09em;
   color: var(--muted);
@@ -198,16 +199,16 @@ body {
 dl { margin: 0; display: grid; grid-template-columns: 4.6rem 1fr; gap: 7px 10px; }
 dt {
   color: var(--muted);
-  font-size: 0.79rem;
+  font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.07em;
   padding-top: 2px;
 }
-dd { margin: 0; font-size: 0.97rem; }
+dd { margin: 0; font-size: 0.85rem; }
 
 .muted { color: var(--muted); }
-.small { font-size: 0.84rem; }
-.note { display: block; margin-top: 4px; font-size: 0.84rem; line-height: 1.45; }
+.small { font-size: 0.74rem; }
+.note { display: block; margin-top: 4px; font-size: 0.74rem; line-height: 1.45; }
 
 .predicted { color: var(--accent); font-weight: 600; }
 .withheld { color: var(--muted); font-style: italic; }
@@ -218,7 +219,7 @@ dd { margin: 0; font-size: 0.97rem; }
   background: var(--line); display: inline-block;
 }
 .conf i.on { background: var(--accent); }
-.conf em { font-style: normal; color: var(--muted); font-size: 0.8rem; margin-left: 4px; }
+.conf em { font-style: normal; color: var(--muted); font-size: 0.72rem; margin-left: 4px; }
 
 .similar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .similar button {
