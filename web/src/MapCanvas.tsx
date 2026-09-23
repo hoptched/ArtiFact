@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Bundle } from "./useData";
 import type { Facet } from "./types";
+import { ImageCache, TIER2_MIN_PX } from "./imageCache";
 
 interface View { x: number; y: number; scale: number }
 
@@ -33,8 +34,9 @@ export function MapCanvas({
   const animRef = useRef<{ start: number } | null>(null);
   const dragRef = useRef<{ x: number; y: number; moved: boolean } | null>(null);
 
-  const { works, layouts, atlasMeta, sheets } = bundle;
+  const { works, layouts, atlasMeta, sheets, facets } = bundle;
   const radius = layouts.work_radius;
+  const images = useMemo(() => new ImageCache(facets.iiif), [facets.iiif]);
 
   const flatten = useCallback((f: Facet) => {
     const xy = layouts.facets[f].xy;
@@ -119,10 +121,29 @@ export function MapCanvas({
 
       ctx.imageSmoothingEnabled = size < tile;
 
+      // Past this size an atlas sprite is visibly blocky, so ask IIIF for
+      // the real thing. Only visible works are ever requested.
+      const wantReal = size >= TIER2_MIN_PX;
+
       for (let i = 0; i < works.length; i++) {
         const px = (pos[i * 2] - vx) * s + cx;
         const py = (pos[i * 2 + 1] - vy) * s + cy;
         if (px < -pad || py < -pad || px > w + pad || py > h + pad) continue;
+
+        if (wantReal) {
+          const real = images.get(works[i].img, size);
+          if (real) {
+            // Whole work, not a crop. The atlas tiles are cover-cropped to
+            // keep the mosaic regular at a distance, but once a work is
+            // big enough to look at, cutting the edges off a painting is
+            // the wrong trade.
+            const nw = real.naturalWidth, nh = real.naturalHeight;
+            const fit = size / Math.max(nw, nh);
+            const dw = nw * fit, dh = nh * fit;
+            ctx.drawImage(real, px - dw / 2, py - dh / 2, dw, dh);
+            continue;
+          }
+        }
 
         const sheetIndex = (i / per_sheet) | 0;
         const sheet = useThumbs ? sheets[sheetIndex] : undefined;
@@ -169,7 +190,7 @@ export function MapCanvas({
     };
     frame = requestAnimationFrame(draw);
     return () => { cancelAnimationFrame(frame); ro.disconnect(); };
-  }, [works, layouts, facet, atlasMeta, sheets, radius, selected, fit, ready]);
+  }, [works, layouts, facet, atlasMeta, sheets, radius, selected, fit, ready, images]);
 
   // --- interaction -------------------------------------------------------
   const toWorld = (clientX: number, clientY: number) => {
