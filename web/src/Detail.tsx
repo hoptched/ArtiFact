@@ -37,6 +37,8 @@ export function Detail({
         src={iiifUrl(facets.iiif, work.img, 843)}
         alt={work.t}
         loading="eager"
+        // AIC 403s a localhost referer; sending none works everywhere.
+        referrerPolicy="no-referrer"
         style={{ background: work.k ?? "#222" }}
       />
 
@@ -90,6 +92,7 @@ export function Detail({
                 src={iiifUrl(facets.iiif, other.img, 200)}
                 alt={other.t}
                 loading="lazy"
+                referrerPolicy="no-referrer"
                 style={{ background: other.k ?? "#222" }}
               />
             </button>

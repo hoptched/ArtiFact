@@ -73,6 +73,11 @@ export class ImageCache {
   private request(key: string, url: string, width: number) {
     if (this.entries.has(key)) return;
     const img = new Image();
+    // AIC's Cloudflare rules 403 any request carrying a localhost referer.
+    // A real origin is allowed, so this only bites in development — but
+    // sending no referrer works everywhere and leaks less, so it is the
+    // right default rather than a dev workaround.
+    img.referrerPolicy = "no-referrer";
     const entry: Entry = { img, width, ready: false };
     this.entries.set(key, entry);
     this.evict();
