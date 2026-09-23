@@ -11,6 +11,7 @@ interface View { x: number; y: number; scale: number }
 const THUMB_MIN_PX = 3.5;
 const LABEL_MAX_SCALE = 4200;
 const ANIM_MS = 750;
+const FLY_MS = 900;
 
 const easeInOut = (t: number) =>
   t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
@@ -37,7 +38,8 @@ export function MapCanvas({
   const toRef = useRef<Float32Array>(new Float32Array(0));
   const animRef = useRef<{ start: number } | null>(null);
   const dragRef = useRef<{ x: number; y: number; moved: boolean } | null>(null);
-  const flyRef = useRef<{ from: View; to: View; start: number } | null>(null);
+  const flyRef = useRef<
+    { from: View; to: View; start: number; ms: number } | null>(null);
 
   const { works, layouts, atlasMeta, sheets, facets, hires } = bundle;
   const radius = layouts.work_radius;
@@ -67,6 +69,21 @@ export function MapCanvas({
     fromRef.current = posRef.current.slice();
     toRef.current = target;
     animRef.current = { start: performance.now() };
+
+    // Pull back to the whole map as the regions re-form. Every facet
+    // rearranges the entire corpus, so whatever you were looking at is
+    // somewhere else afterwards — staying zoomed in just drops you in an
+    // unfamiliar part of a map that has changed under you.
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const rect = canvas.getBoundingClientRect();
+      flyRef.current = {
+        from: { ...viewRef.current },
+        to: { x: 0.5, y: 0.5, scale: Math.min(rect.width, rect.height) * 0.92 },
+        start: performance.now(),
+        ms: ANIM_MS,
+      };
+    }
   }, [facet, flatten]);
 
   // Fit the map to the viewport once, and again whenever it resizes.
@@ -105,7 +122,7 @@ export function MapCanvas({
       // suddenly accelerates.
       const fly = flyRef.current;
       if (fly) {
-        const p = Math.min(1, (performance.now() - fly.start) / 900);
+        const p = Math.min(1, (performance.now() - fly.start) / fly.ms);
         const e = easeInOut(p);
         const v = viewRef.current;
         v.x = fly.from.x + (fly.to.x - fly.from.x) * e;
@@ -303,6 +320,7 @@ export function MapCanvas({
       from: { ...viewRef.current },
       to: { x: focus.x, y: focus.y, scale: target },
       start: performance.now(),
+      ms: FLY_MS,
     };
   }, [focus]);
 
