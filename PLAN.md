@@ -200,6 +200,8 @@ Atlas maths: 9,101 tiles at 32px is 9.3M pixels, about 3 atlases of 2048x2048, r
 
 Needs one new stage, D5b, to build the atlases: re-fetch at 32px, pack in layout order, emit the sheets plus an index. It reuses the D3 fetch path and runs in about two minutes.
 
+**The map is the landing page**, decided 2026-09-23 — provisionally, and easy to reverse, since the grid and the map read the same bundle.
+
 **D6 minimum views**: a grid filtered on period x region x style with a confidence toggle; a detail page with the large IIIF image, all metadata, the predicted style clearly marked as predicted, and a visually-similar row from the KNN; and one of timeline or map, not both.
 
 ## Open questions

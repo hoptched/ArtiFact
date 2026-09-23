@@ -1,0 +1,272 @@
+"""Map layouts for D6: one 2D position per work, per facet.
+
+Precomputed rather than done in the browser. Three facets x 9,101 works is
+small on the wire, identical for every visitor, and keeps a facet switch
+free of a few hundred milliseconds of layout jank.
+
+The facet and the embedding work at different scales and the map uses
+both. The facet decides which region a work belongs to; its embedding
+decides where inside that region it sits. Region centres are themselves
+placed by similarity, so neighbouring regions are genuinely related and
+the blend zone between two of them is real ambiguity rather than
+decoration.
+
+Placing period regions by similarity rather than by date was checked, not
+assumed: across the 13 period bins with 20+ works, the principal axis of
+the similarity layout correlates with chronology at Spearman 0.995, and
+13 of 13 bins are most similar to an adjacent bin against a chance rate
+near 2/13. The map recovers chronology from pixels alone.
+"""
+
+from __future__ import annotations
+
+import numpy as np
+
+# A region holding fewer than this is a speck on the map; 23 of the 35
+# countries are below it, together holding 292 works.
+MIN_REGION = 50
+
+# Everything below works in a 0..1 square holding a disc of radius 0.5.
+DISC_R = 0.5
+# Fraction of the disc the works may occupy. Trades density against
+# overlap and against how faithfully region order survives: 0.20 gives a
+# denser map but chronology at 0.84, 0.08 gives 0.92 and a sparse one.
+PACKING = 0.12
+RELAX_ITERS = 400
+RELAX_STEP = 0.5
+
+
+def work_radius(n: int) -> float:
+    """Per-work radius that lets n works fill PACKING of the disc."""
+    return float(np.sqrt(PACKING * DISC_R ** 2 / max(n, 1)))
+
+
+def group_country(country: str, small: set[str]) -> str:
+    """Countries too thin to be their own region fall back to a bucket."""
+    if country not in small:
+        return country
+    if country in {"Japan", "China", "Korea", "Mongolia", "Tibet", "Nepal",
+                   "India", "Pakistan", "Afghanistan", "Iran", "Uzbekistan",
+                   "Turkey"}:
+        return "Other Asia"
+    if country in {"Egypt", "Ethiopia"}:
+        return "Africa"
+    if country in {"Mexico", "Peru"}:
+        return "Latin America"
+    if country in {"Australia"}:
+        return "Oceania"
+    return "Other Europe"
+
+
+def facet_values(works: list[dict], facet: str) -> list[str]:
+    """One region label per work, aligned to `works`."""
+    if facet == "period":
+        # The midpoint bin, not the overlap set: a region layout needs one
+        # home per work. period_bins still drives filtering.
+        #
+        # Bins below MIN_REGION are merged into the ends. Seven bins hold
+        # between 1 and 7 works each, and their centroids are noise: with
+        # them included the chronology the map recovers falls from 0.995 to
+        # 0.677, because a single 6th-century work gets the same say in the
+        # layout as 2,173 Victorian ones.
+        counts: dict[str, int] = {}
+        for w in works:
+            counts[w["p"]] = counts.get(w["p"], 0) + 1
+        big = sorted(int(k.split("\u2013")[0]) for k, n in counts.items()
+                     if n >= MIN_REGION)
+        first, last = big[0], big[-1]
+        out = []
+        for w in works:
+            start = int(w["p"].split("\u2013")[0])
+            if counts[w["p"]] >= MIN_REGION:
+                out.append(w["p"])
+            elif start < first:
+                out.append(f"Before {first}")
+            else:
+                out.append(f"{last} and later")
+        return out
+    if facet == "style":
+        return [w["s"] or "Outside the taxonomy" for w in works]
+    if facet == "country":
+        counts: dict[str, int] = {}
+        for w in works:
+            counts[w["c"]] = counts.get(w["c"], 0) + 1
+        small = {c for c, n in counts.items() if n < MIN_REGION}
+        return [group_country(w["c"], small) for w in works]
+    raise ValueError(f"unknown facet {facet!r}")
+
+
+def region_centres(vecs: np.ndarray, labels: list[str]) -> dict[str, np.ndarray]:
+    """Place each region by how its works look, not by its name.
+
+    Regions whose works resemble each other end up adjacent, which is what
+    makes a boundary between two regions meaningful.
+    """
+    names = sorted(set(labels))
+    arr = np.array(labels)
+    means = np.vstack([vecs[arr == n].mean(axis=0) for n in names])
+    means /= np.linalg.norm(means, axis=1, keepdims=True)
+
+    if len(names) == 1:
+        return {names[0]: np.zeros(2)}
+    dissim = 1.0 - means @ means.T
+    np.fill_diagonal(dissim, 0.0)
+
+    # Classical MDS (principal coordinates): double-centre the squared
+    # dissimilarities and take the top two eigenvectors. Deterministic and
+    # closed-form, unlike sklearn's iterative SMACOF, which lands in a
+    # different local minimum per seed — with it the map recovered
+    # chronology at 0.78, with this at 0.99, on identical input.
+    sq = dissim ** 2
+    n = len(names)
+    centring = np.eye(n) - np.ones((n, n)) / n
+    gram = -0.5 * centring @ sq @ centring
+    vals, vecs2 = np.linalg.eigh(gram)
+    order = np.argsort(vals)[::-1][:2]
+    xy = vecs2[:, order] * np.sqrt(np.clip(vals[order], 0, None))
+
+    xy -= xy.mean(axis=0)
+    span = np.abs(xy).max()
+    if span > 0:
+        xy = xy / span * DISC_R
+    return dict(zip(names, xy))
+
+
+def pack_regions(centres: dict[str, np.ndarray], sizes: dict[str, int],
+                 iters: int = 300, anchor: float = 0.08
+                 ) -> tuple[dict[str, np.ndarray], dict[str, float]]:
+    """Give each region room proportional to how many works it holds.
+
+    MDS says which regions belong near each other but knows nothing about
+    how much space each needs, so a region of 2,000 lands on top of its
+    neighbours. Two obvious repairs both fail:
+
+    - Free repulsion resolves the overlap but scrambles the ordering. The
+      chronology the period map recovers fell from 0.99 to 0.55, because
+      large regions shoved small ones wherever there was room.
+    - Scaling the whole arrangement up preserves ordering exactly, but one
+      tight pair of large regions sets the scale for everything, and after
+      normalising, each region is so small that relaxing the works inside
+      it pushes them into their neighbours.
+
+    So: repel, then pull each region back toward where similarity says it
+    belongs. The anchor keeps the ordering while the repulsion keeps the
+    spacing, and the scale is set by a high percentile rather than the
+    single worst pair.
+    """
+    names = list(centres)
+    total = sum(sizes.values())
+    home = np.vstack([centres[n] for n in names])
+    rad = np.array([DISC_R * np.sqrt(sizes[n] / total) for n in names])
+
+    ratios = []
+    for i in range(len(names)):
+        for j in range(i + 1, len(names)):
+            gap = float(np.linalg.norm(home[i] - home[j]))
+            if gap > 1e-9:
+                ratios.append((rad[i] + rad[j]) / gap)
+    if ratios:
+        home = home * max(1.0, float(np.quantile(ratios, 0.90)))
+
+    # A region can only hold its works if it stays big enough relative to
+    # them, and normalising to 0..1 divides every region by the layout's
+    # span. Working that through, a region of n works needs
+    #     DISC_R*sqrt(n/total)/span  >=  sqrt(n) * work_radius
+    # which reduces to span <= 1/sqrt(PACKING), independent of n. Past that
+    # point the works spill out of their region and the map turns to soup.
+    # Regions that still overlap are fine: fluid boundaries are the design.
+    limit = 0.85 / np.sqrt(PACKING)
+    span = float(np.abs(home).max()) * 2
+    if span > limit:
+        home = home * (limit / span)
+
+    pos = home.copy()
+    for _ in range(iters):
+        for i in range(len(names)):
+            for j in range(i + 1, len(names)):
+                delta = pos[i] - pos[j]
+                dist = float(np.linalg.norm(delta))
+                want = rad[i] + rad[j]
+                if 1e-9 < dist < want:
+                    push = delta / dist * (want - dist) * 0.5
+                    pos[i] += push
+                    pos[j] -= push
+        pos += (home - pos) * anchor
+    return dict(zip(names, pos)), dict(zip(names, rad))
+
+
+def place(xy_local: np.ndarray, labels: list[str],
+          centres: dict[str, np.ndarray], radii: dict[str, float]) -> np.ndarray:
+    """Work positions: region centre plus the work's own offset within it.
+
+    The offset is the work's UMAP position, so visually similar works sit
+    together inside a region and the map has structure at both zoom levels.
+    """
+    arr = np.array(labels)
+    out = np.zeros((len(labels), 2), dtype=np.float64)
+    for name, centre in centres.items():
+        mask = arr == name
+        local = xy_local[mask] - xy_local[mask].mean(axis=0)
+        extent = np.abs(local).max()
+        if extent > 0:
+            local = local / extent
+        out[mask] = centre + local * radii[name] * 0.92
+    return out
+
+
+def relax(pos: np.ndarray, radius: float, iters: int = RELAX_ITERS,
+          step: float = RELAX_STEP) -> np.ndarray:
+    """Push overlapping works apart so thumbnails stay readable.
+
+    Region membership is already baked into the starting positions, so a
+    purely local repulsion preserves it while removing collisions.
+    """
+    from scipy.spatial import cKDTree
+
+    pos = pos.copy()
+    d = radius * 2
+    for _ in range(iters):
+        tree = cKDTree(pos)
+        pairs = tree.query_pairs(d, output_type="ndarray")
+        if len(pairs) == 0:
+            break
+        a, b = pos[pairs[:, 0]], pos[pairs[:, 1]]
+        delta = a - b
+        dist = np.linalg.norm(delta, axis=1, keepdims=True)
+        dist[dist == 0] = 1e-9
+        push = delta / dist * (d - dist) * step
+        np.add.at(pos, pairs[:, 0], push)
+        np.subtract.at(pos, pairs[:, 1], push)
+    return pos
+
+
+def overlap_count(pos: np.ndarray, radius: float) -> int:
+    from scipy.spatial import cKDTree
+    return len(cKDTree(pos).query_pairs(radius * 2 * 0.95))
+
+
+def build(vecs: np.ndarray, works: list[dict], facet: str) -> tuple:
+    """(positions in 0..1, region centres in 0..1) for one facet."""
+    xy_local = np.array([w["xy"] for w in works], dtype=np.float64)
+    labels = facet_values(works, facet)
+    sizes: dict[str, int] = {}
+    for l in labels:
+        sizes[l] = sizes.get(l, 0) + 1
+
+    centres, radii = pack_regions(region_centres(vecs, labels), sizes)
+
+    def to_unit(p, c, r):
+        lo = p.min(axis=0)
+        span = float((p.max(axis=0) - lo).max())
+        return ((p - lo) / span,
+                {k: (v - lo) / span for k, v in c.items()},
+                {k: v / span for k, v in r.items()})
+
+    # Normalize BEFORE relaxing, so the work radius means the same thing
+    # during relaxation as it does to the client. Normalizing afterwards
+    # rescales every distance and silently undoes the spacing just applied.
+    pos, centres, radii = to_unit(
+        place(xy_local, labels, centres, radii), centres, radii)
+    pos = relax(pos, radius=work_radius(len(labels)))
+    pos, centres, radii = to_unit(pos, centres, radii)
+    return pos, centres, radii, labels

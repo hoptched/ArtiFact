@@ -25,6 +25,7 @@ from collections import Counter
 import numpy as np
 
 from pipeline.config import Config
+from pipeline import layout
 from pipeline.taxonomy import OUTSIDE_TAXONOMY, period_label, style_applies
 
 KNN_CHUNK = 512          # rows of the similarity matrix held at once
@@ -178,10 +179,35 @@ def main() -> None:
     print(f"\n  style withheld for {suppressed:,} works "
           f"({100*suppressed/len(works):.1f}%) outside the taxonomy's domain")
 
+    # --- map layouts, one per facet --------------------------------------
+    layouts = {}
+    for facet in ("period", "country", "style"):
+        pos, centres, radii, labels = layout.build(vecs, works, facet)
+        sizes: dict[str, int] = {}
+        for l in labels:
+            sizes[l] = sizes.get(l, 0) + 1
+        layouts[facet] = {
+            "xy": [[round(float(x), 4), round(float(y), 4)] for x, y in pos],
+            "regions": [
+                {"name": name,
+                 "c": [round(float(centres[name][0]), 4),
+                       round(float(centres[name][1]), 4)],
+                 "r": round(float(radii[name]), 4),
+                 "n": sizes[name]}
+                for name in sorted(sizes, key=lambda k: -sizes[k])],
+            "region_of": labels,
+        }
+        print(f"  layout {facet:<8} {len(sizes):>3} regions")
+    (out / "layouts.json").write_text(json.dumps({
+        "work_radius": round(layout.work_radius(len(works)), 5),
+        "facets": layouts,
+    }, separators=(",", ":"), ensure_ascii=False))
+
     total = sum((out / f).stat().st_size
-                for f in ("works.json", "neighbors.json", "facets.json"))
+                for f in ("works.json", "neighbors.json", "facets.json",
+                          "layouts.json"))
     print(f"\n=== bundle ===")
-    for f in ("works.json", "neighbors.json", "facets.json"):
+    for f in ("works.json", "neighbors.json", "facets.json", "layouts.json"):
         print(f"  {f:<16} {(out/f).stat().st_size/1e6:6.2f} MB")
     print(f"  {'total':<16} {total/1e6:6.2f} MB   "
           f"(cap {config.site.max_bundle_mb} MB)")
