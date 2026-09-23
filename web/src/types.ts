@@ -1,4 +1,4 @@
-export type Facet = "period" | "country" | "style";
+export type Facet = "similarity" | "period" | "country" | "style";
 
 export interface Work {
   id: number;

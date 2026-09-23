@@ -192,20 +192,24 @@ def main() -> None:
 
     # --- map layouts, one per facet --------------------------------------
     layouts = {}
-    for facet in ("period", "country", "style"):
+    for facet in ("similarity", "period", "country", "style"):
         pos, centres, radii, labels = layout.build(vecs, works, facet)
         sizes: dict[str, int] = {}
         for l in labels:
             sizes[l] = sizes.get(l, 0) + 1
         layouts[facet] = {
             "xy": [[round(float(x), 4), round(float(y), 4)] for x, y in pos],
+            # The similarity layout has no regions at all — position is the
+            # embedding and nothing else — so it ships an empty list and
+            # the client draws no labels.
             "regions": [
                 {"name": name,
                  "c": [round(float(centres[name][0]), 4),
                        round(float(centres[name][1]), 4)],
                  "r": round(float(radii[name]), 4),
                  "n": sizes[name]}
-                for name in sorted(sizes, key=lambda k: -sizes[k])],
+                for name in sorted(sizes, key=lambda k: -sizes[k])
+                if name in centres],
             "region_of": labels,
         }
         print(f"  layout {facet:<8} {len(sizes):>3} regions")
