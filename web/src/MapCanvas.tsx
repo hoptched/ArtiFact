@@ -295,7 +295,8 @@ export function MapCanvas({
           if (px < 0 || py < 0 || px > w || py > h) continue;
           const font = Math.min(34, Math.max(11, region.r * s * 0.24)) * dpr;
           if (font < 9 * dpr) continue;
-          ctx.font = `600 ${font}px ui-sans-serif, system-ui, sans-serif`;
+          ctx.font =
+            `600 ${font}px "Cormorant Garamond", "Orpheus Pro", Georgia, serif`;
           ctx.lineWidth = 4 * dpr;
           ctx.strokeStyle = "rgba(6,6,8,0.85)";
           ctx.strokeText(region.name, px, py);
