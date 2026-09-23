@@ -106,7 +106,7 @@ Each one ends in something you can look at. Sizes assume evenings, not full days
 | D1 | Corpus harvest: walk the AIC listing endpoint, keep public-domain works with an image and a date, cache raw JSON | `data/raw/artworks.jsonl` holds ~59k records across all types; re-running is a no-op | **Done** 2026-09-22 |
 | D2 | Taxonomy + normalization: filter to painting-like, period buckets, region lookup, style label set | Coverage report prints % labeled per axis; ~9.6k works out; 50 random rows eyeballed and agreed with | **Done** 2026-09-22 |
 | D3 | Embeddings: fetch at ~336px, encode with frozen CLIP, save aligned vectors | `embeddings.npy` + id list exist; 5 nearest neighbors of a Monet are other Monets | **Done** 2026-09-23 |
-| D4 | Style classifier: encode WikiArt, train the head, report accuracy and per-class F1 under both a random and an artist-grouped split | Confusion matrix saved, and you can explain its worst cell | In progress |
+| D4 | Style classifier: encode WikiArt, train the head, report accuracy and per-class F1 under both a random and an artist-grouped split | Confusion matrix saved, and you can explain its worst cell | **Done** 2026-09-23 |
 | D5 | Inference + index: predict style over AIC, compute top-20 KNN and 2D UMAP | `web/public/data/` holds everything the site needs, under ~10 MB | Not started |
 | D6 | Website: grid with filters, detail page, one timeline or map view | Deployed at a URL, loads in under two seconds | Not started |
 | D7 | Stretch: CLIP text search, UMAP constellation, Met corpus merged, writeup | Only after D6 ships | Not started |
@@ -124,6 +124,21 @@ All three settled 2026-09-22, in `pipeline/taxonomy.py` (tables) and `pipeline/n
 - **Style** — 17 labels, mapped from WikiArt's 27 classes (verified against the HuggingFace dataset info, not recalled). Pointillism merges into Post-Impressionism; Analytical and Synthetic Cubism into Cubism. Seven postwar classes (Abstract Expressionism, Action painting, Color Field, Contemporary Realism, Minimalism, New Realism, Pop Art) are **dropped, not merged** — the corpus is public domain and therefore ~95% pre-1900, so a head that never sees Pop Art cannot predict it for an 1870 landscape.
 
 **Watch-out for D5/D6:** `artist_title` flattens attribution — "After Raffaello Sanzio, called Raphael" becomes plain `Raphael`, putting 18th-century copies under a painter who died in 1520. `artist_display` keeps the qualifier, so the site should show that field, not `artist_title`.
+
+**D4 results, 2026-09-23.** 73,334 WikiArt images encoded on the Spark (8,110 dropped as postwar classes), a linear head over frozen CLIP vectors with balanced class weights.
+
+| Split | Accuracy | Macro F1 |
+| --- | --- | --- |
+| Random | 0.598 | 0.602 |
+| **Artist-grouped, pooled over 5 folds** | **0.539** | **0.516** |
+
+Against a 17.8% majority-class baseline on 17 classes. The gap of only -0.059 accuracy is the encouraging part: the head is learning style rather than memorising painters. Strongest classes are Ukiyo-e (0.825), Cubism (0.748) and Impressionism (0.687) — styles with a broad shared visual signature. Weakest is Fauvism (0.168, 934 works from 8 artists), a three-year movement sitting between Post-Impressionism and Expressionism.
+
+Worst confusions are symmetric and correct: Impressionism <-> Post-Impressionism (1161/1124), Impressionism <-> Realism (985/941), Realism <-> Romanticism (707/449). Adjacent movements confusing each other in both directions is the expected behaviour, not a defect — surface confidence on the site rather than hiding it.
+
+**"Unknown Artist" is 47% of WikiArt and must not be held out as a group.** Artist index 0 covers 34,444 of the 73,334 works. It is the absence of attribution, not a painter. Treating it as one group put half the corpus in a single test fold and depressed pooled accuracy to 0.502 for reasons unrelated to the model. Those works still train the head; the grouped metric is measured on the 38,890 attributed works only, where "an artist the model never saw" is a checkable claim.
+
+**Evaluate per-class F1 with support alongside it.** A single grouped fold left Early Renaissance with one test example and an F1 of 0.000, which read as total failure and meant nothing. Pooling all 5 folds so every work is tested exactly once fixed it.
 
 **D4 must split by artist, not at random.** WikiArt's 81,444 images come from 129 artists whose styles are near-fixed — every Monet is Impressionism — so a random split puts the same painter in train and test and lets the head score well by recognising painters instead of styles. D3 already showed CLIP does this readily: 18.1% of nearest neighbours share an artist. The AIC corpus is mostly painters absent from WikiArt's 129, so a random-split number would flatter the model and then disappoint in D5. Report both splits, lead with the artist-grouped one, and treat the gap between them as a result in its own right: it measures how much of the score is style versus painter recognition.
 
