@@ -177,6 +177,10 @@ body {
   color: var(--muted);
 }
 
+/* Fits rather than scrolls: the text and the neighbour strip take what
+   they need, and the image takes whatever is left. A tall drawing gets a
+   tall frame, a wide one gets a short frame, and neither pushes the
+   metadata off the bottom. */
 .detail {
   position: absolute;
   z-index: 3;
@@ -184,10 +188,14 @@ body {
   right: 0;
   width: min(26rem, 100%);
   height: 100%;
-  overflow-y: auto;
+  overflow: hidden;
   background: var(--panel);
-  padding: 18px 22px 28px;
+  padding: 18px 22px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
+.detail > *:not(.hero) { flex: 0 0 auto; }
 .detail .close {
   position: absolute;
   top: 10px;
@@ -203,7 +211,11 @@ body {
   cursor: pointer;
 }
 .detail .hero {
+  flex: 1 1 auto;
+  min-height: 5rem;
   width: 100%;
+  object-fit: contain;
+  object-position: center top;
   border-radius: 8px;
   display: block;
   margin-bottom: 14px;
@@ -211,14 +223,14 @@ body {
 .detail h2 { margin: 0 0 3px; font-size: 1.05rem; line-height: 1.3; }
 .detail .artist { margin: 0 0 14px; color: var(--muted); font-size: 0.85rem; }
 .detail h3 {
-  margin: 22px 0 8px;
+  margin: 16px 0 7px;
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.09em;
   color: var(--muted);
 }
 
-dl { margin: 0; display: grid; grid-template-columns: 4.6rem 1fr; gap: 7px 10px; }
+dl { margin: 0; display: grid; grid-template-columns: 4.4rem 1fr; gap: 6px 10px; }
 dt {
   color: var(--muted);
   font-size: 0.68rem;
@@ -243,7 +255,7 @@ dd { margin: 0; font-size: 0.85rem; }
 .conf i.on { background: var(--accent); }
 .conf em { font-style: normal; color: var(--muted); font-size: 0.72rem; margin-left: 4px; }
 
-.similar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.similar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
 .similar button {
   padding: 0; border: 1px solid var(--line); background: none;
   border-radius: 6px; overflow: hidden; cursor: pointer; aspect-ratio: 1;
@@ -252,7 +264,7 @@ dd { margin: 0; font-size: 0.85rem; }
 .similar img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
 @media (max-width: 700px) {
-  .detail { width: 100%; height: 62%; top: auto; bottom: 0; }
+  .detail { width: 100%; height: 70%; top: auto; bottom: 0; }
   
 }
 
@@ -324,4 +336,12 @@ dd { margin: 0; font-size: 0.85rem; }
   }
   .regions li { display: block; }
   .regions ul button { font-size: 0.82rem; padding: 4px 6px; }
+}
+
+/* The last thing worth keeping, so it is the first thing dropped when the
+   window is too short for everything. */
+.note-foot { margin: 8px 0 0; }
+@media (max-height: 640px) {
+  .note-foot { display: none; }
+  .detail .similar { grid-template-columns: repeat(8, 1fr); }
 }

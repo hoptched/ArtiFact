@@ -99,7 +99,7 @@ export function Detail({
           );
         })}
       </div>
-      <p className="muted small">
+      <p className="muted small note-foot">
         Neighbours come from image similarity alone — no title, date or place
         was used to find them.
       </p>
