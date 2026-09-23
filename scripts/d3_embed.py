@@ -37,14 +37,24 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-# Confined sizing (!w,h), not sizeByW. AIC's IIIF server refuses any
-# request that would upscale: "Requests for scales in excess of 100% are
-# not allowed", HTTP 403. Asking for a fixed width therefore fails for
-# every work narrower than it, which is not a rare edge case here — it is
-# hanging scrolls, 235x768 and the like, and it silently cost 31 works
-# including 16 of the Japanese ones. !w,h fits inside the box instead and
-# never upscales.
-IIIF = "https://www.artic.edu/iiif/2/{image_id}/full/!{width},{width}/0/default.jpg"
+# Two URL forms, fast one first.
+#
+# sizeByW (/full/400,/) is what AIC's CDN has already cached, and it
+# serves at ~100 images/sec. But their server refuses anything that would
+# upscale — "Requests for scales in excess of 100% are not allowed", HTTP
+# 403 — so it fails for every work narrower than the width asked for.
+# That is not an edge case here: it is hanging scrolls at 235x768, and it
+# silently cost 31 works, 16 of them Japanese.
+#
+# Confined sizing (!400,400) fits inside the box and never upscales, so it
+# works for all of them — but it is a novel URL, missing the CDN and
+# forcing an origin resize, which measured ~2.5 images/sec. Forty times
+# slower for the sake of 0.3% of the corpus.
+#
+# So: ask the fast way, and fall back to the slow way only on the 403.
+IIIF = "https://www.artic.edu/iiif/2/{image_id}/full/{width},/0/default.jpg"
+IIIF_CONFINED = ("https://www.artic.edu/iiif/2/{image_id}"
+                 "/full/!{width},{width}/0/default.jpg")
 
 # Side length the image is squashed to before averaging. Small enough to be
 # free, large enough that a thin bright frame does not dominate.
@@ -100,6 +110,7 @@ def dominant_color(img, np) -> tuple[int, int, int]:
 # how it looked after several full runs in a row made AIC start throttling.
 # Counted here and reported by the progress line instead.
 THROTTLED = {"n": 0}
+CONFINED = {"n": 0}
 
 
 def fetch(session, image_id: str, width: int, cache: Path, retries: int = 3):
@@ -107,22 +118,27 @@ def fetch(session, image_id: str, width: int, cache: Path, retries: int = 3):
     cached = cache / f"{image_id}.jpg"
     if cached.exists():
         return cached.read_bytes()
-    url = IIIF.format(image_id=image_id, width=width)
-    for attempt in range(retries):
-        try:
-            resp = session.get(url, timeout=60.0)
-        except Exception:
-            THROTTLED["n"] += 1
-            time.sleep(2 ** attempt)
-            continue
-        if resp.status_code == 429 or resp.status_code >= 500:
-            THROTTLED["n"] += 1
-            time.sleep(2 ** attempt + 1)
-            continue
-        if resp.status_code != 200:
-            return None
-        cached.write_bytes(resp.content)
-        return resp.content
+    for template in (IIIF, IIIF_CONFINED):
+        url = template.format(image_id=image_id, width=width)
+        for attempt in range(retries):
+            try:
+                resp = session.get(url, timeout=60.0)
+            except Exception:
+                THROTTLED["n"] += 1
+                time.sleep(2 ** attempt)
+                continue
+            if resp.status_code == 429 or resp.status_code >= 500:
+                THROTTLED["n"] += 1
+                time.sleep(2 ** attempt + 1)
+                continue
+            if resp.status_code == 403:
+                # Too small for a fixed width; the confined form will fit.
+                CONFINED["n"] += 1
+                break
+            if resp.status_code != 200:
+                return None
+            cached.write_bytes(resp.content)
+            return resp.content
     return None
 
 
@@ -261,7 +277,8 @@ def main() -> None:
             waits = THROTTLED["n"]
             print(f"  {done:>6,}/{len(todo):,}  {rate:5.1f} img/s  "
                   f"eta {eta/60:5.1f} min  failed {failed}"
-                  + (f"  backed off {waits}x" if waits else ""))
+                  + (f"  backed off {waits}x" if waits else "")
+                  + (f"  confined {CONFINED['n']}" if CONFINED["n"] else ""))
         flush()
 
     # --- merge shards into the aligned pair D4 and D5 consume -------------

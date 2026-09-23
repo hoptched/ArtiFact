@@ -36,14 +36,12 @@ from pathlib import Path
 
 from PIL import Image
 
-# Confined sizing (!w,h), not sizeByW. AIC's IIIF server refuses any
-# request that would upscale: "Requests for scales in excess of 100% are
-# not allowed", HTTP 403. Asking for a fixed width therefore fails for
-# every work narrower than it, which is not a rare edge case here — it is
-# hanging scrolls, 235x768 and the like, and it silently cost 31 works
-# including 16 of the Japanese ones. !w,h fits inside the box instead and
-# never upscales.
-IIIF = "https://www.artic.edu/iiif/2/{image_id}/full/!{width},{width}/0/default.jpg"
+# Fast, CDN-cached form first; the confined form only for works too
+# narrow for it, which AIC answers with a 403. See d3_embed.py.
+IIIF = "https://www.artic.edu/iiif/2/{image_id}/full/{width},/0/default.jpg"
+IIIF_CONFINED = ("https://www.artic.edu/iiif/2/{image_id}"
+                 "/full/!{width},{width}/0/default.jpg")
+
 SHEET_PX = 2048
 FETCH_WIDTH = 200          # plenty for a 32px tile, cheap if we must fetch
 
@@ -115,12 +113,18 @@ def main() -> None:
                 return path.read_bytes()
         if session is None:
             return None
-        try:
-            r = session.get(IIIF.format(image_id=image_id, width=FETCH_WIDTH),
-                            timeout=60.0)
-            return r.content if r.status_code == 200 else None
-        except Exception:
-            return None
+        for template in (IIIF, IIIF_CONFINED):
+            try:
+                r = session.get(
+                    template.format(image_id=image_id, width=FETCH_WIDTH),
+                    timeout=60.0)
+            except Exception:
+                return None
+            if r.status_code == 200:
+                return r.content
+            if r.status_code != 403:
+                return None
+        return None
 
     missing = 0
     started = time.time()
