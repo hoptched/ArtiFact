@@ -39,16 +39,24 @@ export class ImageCache {
 
   constructor(
     private template: string,
-    private maxEntries = 400,
-    private maxInflight = 12,
+    private maxEntries = 500,
+    private maxInflight = 24,
     // Bounded rather than cleared: a queue that is emptied every frame
     // never drains, because each dropped entry is re-requested on the
     // next frame and dropped again. Only the first few ever load.
     private maxQueue = 80,
   ) {}
 
-  /** The best cached image for this work, or null. Requests one if absent. */
-  get(imageId: string, pxOnScreen: number): HTMLImageElement | null {
+  /**
+   * The best cached image for this work, or null. Never requests.
+   *
+   * Drawing and requesting are separate so the caller can ask for
+   * everything on screen first and only then decide what to fetch, in
+   * priority order. Requesting inline meant the tile under the cursor
+   * queued behind whatever happened to come first in the works array —
+   * which is id order, unrelated to where anyone is looking.
+   */
+  peek(imageId: string, pxOnScreen: number): HTMLImageElement | null {
     const width = bucketFor(pxOnScreen);
     const key = `${imageId}@${width}`;
     const hit = this.entries.get(key);
@@ -57,10 +65,22 @@ export class ImageCache {
       // moves this entry to the newest end for eviction.
       this.entries.delete(key);
       this.entries.set(key, hit);
-      return hit.ready ? hit.img : this.smaller(imageId, width);
+      if (hit.ready) return hit.img;
     }
-    this.request(key, iiifUrl(this.template, imageId, width), width);
     return this.smaller(imageId, width);
+  }
+
+  /** True if this work at this size is neither loaded nor already asked for. */
+  wants(imageId: string, pxOnScreen: number): boolean {
+    return !this.entries.has(`${imageId}@${bucketFor(pxOnScreen)}`);
+  }
+
+  /** Ask for one work, nearest-first per the caller's ordering. */
+  fetch(imageId: string, pxOnScreen: number): void {
+    const width = bucketFor(pxOnScreen);
+    const key = `${imageId}@${width}`;
+    if (this.entries.has(key)) return;
+    this.request(key, iiifUrl(this.template, imageId, width), width);
   }
 
   /** A smaller already-loaded size, so zooming shows something immediately. */

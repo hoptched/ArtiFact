@@ -117,6 +117,10 @@ export function MapCanvas({
       const { tile, grid, per_sheet } = atlasMeta;
       // Cull generously: one tile of slop stops edges popping in.
       const pad = size + 4;
+      // Images are fetched for a wider band than is drawn, so panning
+      // moves into work that is already loaded instead of starting from
+      // the sprite every time. Half a screen in each direction.
+      const prefetch = Math.max(w, h) * 0.5;
 
       ctx.imageSmoothingEnabled = size < tile;
 
@@ -126,11 +130,28 @@ export function MapCanvas({
       // a constant, so re-running D5b at a different tile size needs no
       // client change.
       const wantReal = size >= Math.max(TIER2_MIN_PX, tile * 0.9);
+      // Collected during the draw and requested after it, nearest to the
+      // centre of the screen first, so what you are looking at arrives
+      // before what is at the edge.
+      const missing: { id: string; d2: number }[] = [];
 
       for (let i = 0; i < works.length; i++) {
         const px = (pos[i * 2] - vx) * s + cx;
         const py = (pos[i * 2 + 1] - vy) * s + cy;
-        if (px < -pad || py < -pad || px > w + pad || py > h + pad) continue;
+        const onScreen =
+          px >= -pad && py >= -pad && px <= w + pad && py <= h + pad;
+        if (!onScreen) {
+          if (!wantReal) continue;
+          if (px < -prefetch || py < -prefetch ||
+              px > w + prefetch || py > h + prefetch) continue;
+          if (images.wants(works[i].img, size)) {
+            const ox = px - cx, oy = py - cy;
+            // Ranked behind everything on screen, so visible tiles never
+            // wait on a neighbour you have not reached yet.
+            missing.push({ id: works[i].img, d2: ox * ox + oy * oy + 1e9 });
+          }
+          continue;
+        }
 
         // Every tier draws the work's true shape. `size` is the box it has
         // to fit inside, not the shape it takes: a 1:3 hanging scroll is a
@@ -141,10 +162,14 @@ export function MapCanvas({
         const hw = tw / 2, hh = th / 2;
 
         if (wantReal) {
-          const real = images.get(works[i].img, size);
+          const real = images.peek(works[i].img, size);
           if (real) {
             ctx.drawImage(real, px - hw, py - hh, tw, th);
             continue;
+          }
+          if (images.wants(works[i].img, size)) {
+            const ox = px - cx, oy = py - cy;
+            missing.push({ id: works[i].img, d2: ox * ox + oy * oy });
           }
         }
 
@@ -167,6 +192,15 @@ export function MapCanvas({
         } else {
           ctx.fillStyle = works[i].k ?? "#3a3a3f";
           ctx.fillRect(px - hw, py - hh, tw, th);
+        }
+      }
+
+      // Nearest first. Capped per frame so a fast pan does not enqueue a
+      // whole screen of work that has scrolled away by the time it lands.
+      if (missing.length) {
+        missing.sort((a, b) => a.d2 - b.d2);
+        for (let n = 0; n < Math.min(missing.length, 32); n++) {
+          images.fetch(missing[n].id, size);
         }
       }
 
