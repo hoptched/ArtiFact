@@ -32,15 +32,17 @@ export function Detail({
     <aside className="detail">
       <button className="close" onClick={onClose} aria-label="Close">×</button>
 
-      <img
-        className="hero"
-        src={iiifUrl(facets.iiif, work.img, 843)}
-        alt={work.t}
-        loading="eager"
-        // AIC 403s a localhost referer; sending none works everywhere.
-        referrerPolicy="no-referrer"
-        style={{ background: work.k ?? "#222" }}
-      />
+      {/* The image sizes itself; the box around it absorbs the slack and
+          sits empty, so there is no coloured block under a short work. */}
+      <div className="herobox">
+        <img
+          src={iiifUrl(facets.iiif, work.img, 843)}
+          alt={work.t}
+          loading="eager"
+          // AIC 403s a localhost referer; sending none works everywhere.
+          referrerPolicy="no-referrer"
+        />
+      </div>
 
       <h2>{work.t}</h2>
       {work.a && <p className="artist">{work.a.split("\n")[0]}</p>}
@@ -93,7 +95,6 @@ export function Detail({
                 alt={other.t}
                 loading="lazy"
                 referrerPolicy="no-referrer"
-                style={{ background: other.k ?? "#222" }}
               />
             </button>
           );
