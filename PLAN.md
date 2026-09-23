@@ -103,7 +103,7 @@ Each one ends in something you can look at. Sizes assume evenings, not full days
 | D0 | Scaffold: `pipeline/`, `web/`, `data/`, venv, `config.yaml` for backbone and corpus cap | `.venv/bin/python -m pipeline.hello` prints the config | **Done** 2026-09-22 |
 | D1 | Corpus harvest: walk the AIC listing endpoint, keep public-domain works with an image and a date, cache raw JSON | `data/raw/artworks.jsonl` holds ~59k records across all types; re-running is a no-op | **Done** 2026-09-22 |
 | D2 | Taxonomy + normalization: filter to painting-like, period buckets, region lookup, style label set | Coverage report prints % labeled per axis; ~9.6k works out; 50 random rows eyeballed and agreed with | **Done** 2026-09-22 |
-| D3 | Embeddings: fetch at ~336px, encode with frozen CLIP, save aligned vectors | `embeddings.npy` + id list exist; 5 nearest neighbors of a Monet are other Monets | Not started |
+| D3 | Embeddings: fetch at ~336px, encode with frozen CLIP, save aligned vectors | `embeddings.npy` + id list exist; 5 nearest neighbors of a Monet are other Monets | **Done** 2026-09-23 |
 | D4 | Style classifier: encode WikiArt, train the head, report accuracy and per-class F1 | Confusion matrix saved, and you can explain its worst cell | Not started |
 | D5 | Inference + index: predict style over AIC, compute top-20 KNN and 2D UMAP | `web/public/data/` holds everything the site needs, under ~10 MB | Not started |
 | D6 | Website: grid with filters, detail page, one timeline or map view | Deployed at a URL, loads in under two seconds | Not started |
@@ -122,6 +122,12 @@ All three settled 2026-09-22, in `pipeline/taxonomy.py` (tables) and `pipeline/n
 - **Style** — 17 labels, mapped from WikiArt's 27 classes (verified against the HuggingFace dataset info, not recalled). Pointillism merges into Post-Impressionism; Analytical and Synthetic Cubism into Cubism. Seven postwar classes (Abstract Expressionism, Action painting, Color Field, Contemporary Realism, Minimalism, New Realism, Pop Art) are **dropped, not merged** — the corpus is public domain and therefore ~95% pre-1900, so a head that never sees Pop Art cannot predict it for an 1870 landscape.
 
 **Watch-out for D5/D6:** `artist_title` flattens attribution — "After Raffaello Sanzio, called Raphael" becomes plain `Raphael`, putting 18th-century copies under a painter who died in 1520. `artist_display` keeps the qualifier, so the site should show that field, not `artist_title`.
+
+**D3 ran 2026-09-23 on a DGX Spark (GB10, sm_121, aarch64).** `scripts/d3_embed.py`, torch 2.14+cu130, batch 512: 9,101 vectors of 9,132 in under two minutes at 84.7 img/s, bounded by AIC's image server rather than the GPU. 31 images were unfetchable (0.34%), skewed Japanese (16) — large screens and scrolls whose IIIF derivative did not resolve.
+
+Acceptance: *Poppy Field (Giverny)* returns three Monets in its top five, the other two being a Van Gogh and a Blery landscape of the same moment. Across 195 artists with 8+ works, 18.1% of top-5 neighbours share the artist against a chance rate well under 1%.
+
+**Preprocessing backend must match across D3 and D4.** transformers 5.x falls back to `CLIPImageProcessorPil` when torchvision is absent, and PIL and torchvision resize differently, so vectors preprocessed two ways do not share a space. The fingerprint does not cover this; `manifest.json` records it. The AIC run used `CLIPImageProcessor` (torchvision), and the WikiArt run must too.
 
 **D3 is the only compute-heavy step, and it runs elsewhere.** Write it as a self-contained, batched, resumable script that takes the D2 output and depends on nothing else in the local environment. It should run unattended in Colab or on a remote box, and `embeddings.npy` plus the id list should be the only things you copy back. Pin the backbone name and image size in `config.yaml` so the remote run and the local corpus can never drift apart.
 
