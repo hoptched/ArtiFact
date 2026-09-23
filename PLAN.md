@@ -158,6 +158,48 @@ Acceptance: *Poppy Field (Giverny)* returns three Monets in its top five, the ot
 
 Confidence is shown, never thresholded, per the decision of 2026-09-23. Western drawings predict at 0.421 against 0.576 for paintings, with 27% funnelled into Baroque — real but not disqualifying, and the reader can see it.
 
+## D6 design: the map
+
+Decided 2026-09-23. The site is one zoomable map of all 9,101 works, plus a detail view. You pick what the map is organised by — period, country or style — and the regions re-form around that choice.
+
+**Two dimensions, not three.** Images are opaque, so a 3D image cloud is a pile of billboards hiding each other; a 3D *point* cloud works only because points are small enough to see past. 2D also keeps zoom-to-detail as the single navigation gesture everyone already knows, keeps region labels flat and legible instead of billboarded, and avoids depth-sorting 9,101 textured quads. The only thing 3D offers is more room to separate clusters, which a better 2D layout gives for free.
+
+### Layout: facet chooses the region, embedding chooses the spot
+
+The facet is a known fact and partitions the corpus. The CLIP embedding is emergent and measures visual similarity. They operate at different scales and the map uses both:
+
+1. Each facet value gets an attractor point. Attractors are themselves placed by similarity — the mean embedding of each facet value, projected to 2D — so Baroque lands near Rococo and Impressionism near Post-Impressionism rather than in alphabetical order.
+2. Each work is placed by blending its attractor with its own UMAP position, then relaxed so thumbnails do not overlap.
+
+Regions come out fluid and organic rather than as packed circles, and boundaries are meaningful: a work sitting between Impressionism and Post-Impressionism is genuinely ambiguous, which is exactly what D4's confusion matrix says. Colour the regions with a gradient and the blend zones read as the uncertainty they are.
+
+Switching facet re-runs step 1 and animates works to new positions. Same works, same similarity structure, different organising principle.
+
+**Regions must use the midpoint bin, not the overlap set.** 48.4% of works belong to two period bins, and a region layout needs one home per work. `period_bin` places it; `period_bins` still drives filtering. So a work can sit in the 1700-1749 region and still match an 1750-1799 filter — deliberate, and the detail page shows both.
+
+**Group the country tail.** 35 countries, largest 2,334, smallest 1, and 23 of them hold under 50 works (292 total). Render those as "Other Europe" / "Other Asia" rather than 23 specks. Style needs no such treatment: 18 regions, largest 2,047, only Cubism (24) and Fauvism (14) below 50.
+
+### Thumbnail loading
+
+The hard part is not layout, it is that 9,101 images cannot load at once. Four tiers, each earning its place:
+
+| Tier | When | What renders | Cost |
+| --- | --- | --- | --- |
+| 0 | Everything visible | Dominant colour per work, one canvas | 73 KB, already in `works.json` as `k` |
+| 1 | Region fills the view | 32px sprites from an atlas | ~2-3 MB total, lazy per region |
+| 2 | Tens of works visible | IIIF at 200px, viewport-culled | On demand |
+| 3 | Detail view | IIIF at 843px | One image |
+
+**Tier 0 is why the colour pass exists.** The whole corpus renders instantly as a mosaic with no network at all, and the map is legible before anything loads.
+
+**Tier 1 should be a pre-built atlas, not IIIF.** Zoom-out to zoom-in is the core interaction and it has to feel instant; 300 IIIF round-trips per pan would make it lag exactly where the site is supposed to feel good, and it would hammer a museum CDN on every pan. Atlases are built once, sharded by region so only visible regions load, and cached forever. AIC images are CC0, so a 32px atlas is legally fine — PLAN.md's "images are never stored" rule is about deploy size, and 2-3 MB is within the 10 MB budget.
+
+Atlas maths: 9,101 tiles at 32px is 9.3M pixels, about 3 atlases of 2048x2048, roughly 1-3 MB as JPEG.
+
+**Tiers 2 and 3 stay on IIIF**, which is what it is for — any size by URL, straight from AIC's CDN, nothing stored.
+
+Needs one new stage, D5b, to build the atlases: re-fetch at 32px, pack in layout order, emit the sheets plus an index. It reuses the D3 fetch path and runs in about two minutes.
+
 **D6 minimum views**: a grid filtered on period x region x style with a confidence toggle; a detail page with the large IIIF image, all metadata, the predicted style clearly marked as predicted, and a visually-similar row from the KNN; and one of timeline or map, not both.
 
 ## Open questions
