@@ -39,6 +39,10 @@ from pathlib import Path
 
 IIIF = "https://www.artic.edu/iiif/2/{image_id}/full/{width},/0/default.jpg"
 
+# Side length the image is squashed to before averaging. Small enough to be
+# free, large enough that a thin bright frame does not dominate.
+COLOR_SAMPLE = 32
+
 
 def fingerprint(backbone: str, image_size: int) -> str:
     return hashlib.sha256(f"{backbone}@{image_size}".encode()).hexdigest()[:12]
@@ -65,6 +69,24 @@ def done_ids(shard_dir: Path) -> set[int]:
             print(f"  discarding unreadable shard {shard.name} ({exc})")
             shard.unlink()
     return seen
+
+
+def dominant_color(img, np) -> tuple[int, int, int]:
+    """One representative colour, for rendering a work before its image loads.
+
+    Averaged in linear light rather than in sRGB. Averaging gamma-encoded
+    values pulls everything towards muddy mid-grey, which would make a
+    mosaic of 9,101 of these look like gravel; linearising first keeps
+    bright and saturated pictures reading as bright and saturated.
+    """
+    small = np.asarray(img.resize((COLOR_SAMPLE, COLOR_SAMPLE)),
+                       dtype=np.float32) / 255.0
+    linear = np.where(small <= 0.04045, small / 12.92,
+                      ((small + 0.055) / 1.055) ** 2.4)
+    mean = linear.reshape(-1, 3).mean(axis=0)
+    srgb = np.where(mean <= 0.0031308, mean * 12.92,
+                    1.055 * mean ** (1 / 2.4) - 0.055)
+    return tuple(int(round(c * 255)) for c in srgb.clip(0, 1))
 
 
 def fetch(session, image_id: str, width: int, cache: Path, retries: int = 3):
@@ -156,19 +178,21 @@ def main() -> None:
 
     pending_ids: list[int] = []
     pending_vecs: list["np.ndarray"] = []
+    pending_cols: list[tuple[int, int, int]] = []
     shard_n = len(list(shard_dir.glob("shard_*.npz")))
     failed = 0
     started = time.time()
 
     def flush() -> None:
-        nonlocal shard_n, pending_ids, pending_vecs
+        nonlocal shard_n, pending_ids, pending_vecs, pending_cols
         if not pending_ids:
             return
         np.savez(shard_dir / f"shard_{shard_n:05d}.npz",
                  ids=np.array(pending_ids, dtype=np.int64),
-                 vecs=np.vstack(pending_vecs).astype(np.float32))
+                 vecs=np.vstack(pending_vecs).astype(np.float32),
+                 colors=np.array(pending_cols, dtype=np.uint8))
         shard_n += 1
-        pending_ids, pending_vecs = [], []
+        pending_ids, pending_vecs, pending_cols = [], [], []
 
     headers = {"User-Agent": "ArtiFact/0.1 (personal project)"}
     with httpx.Client(headers=headers, follow_redirects=True) as session, \
@@ -179,16 +203,19 @@ def main() -> None:
                 lambda r: fetch(session, r["image_id"], args.iiif_width, cache),
                 batch))
 
-            images, ids = [], []
+            images, ids, colors = [], [], []
             for row, blob in zip(batch, blobs):
                 if blob is None:
                     failed += 1
                     continue
                 try:
-                    images.append(Image.open(io.BytesIO(blob)).convert("RGB"))
-                    ids.append(row["id"])
+                    img = Image.open(io.BytesIO(blob)).convert("RGB")
                 except Exception:
                     failed += 1
+                    continue
+                images.append(img)
+                colors.append(dominant_color(img, np))
+                ids.append(row["id"])
             if not images:
                 continue
 
@@ -201,6 +228,7 @@ def main() -> None:
                 vecs = vecs / vecs.norm(dim=-1, keepdim=True)
             pending_ids.extend(ids)
             pending_vecs.append(vecs.cpu().numpy())
+            pending_cols.extend(colors)
 
             if len(pending_ids) >= args.shard_every:
                 flush()
@@ -213,20 +241,26 @@ def main() -> None:
         flush()
 
     # --- merge shards into the aligned pair D4 and D5 consume -------------
-    ids_all, vecs_all = [], []
+    ids_all, vecs_all, cols_all = [], [], []
     for shard in sorted(shard_dir.glob("shard_*.npz")):
         z = np.load(shard)
+        if "colors" not in z:
+            sys.exit(f"{shard.name} predates the colour pass; "
+                     f"delete --out and re-run")
         ids_all.append(z["ids"])
         vecs_all.append(z["vecs"])
+        cols_all.append(z["colors"])
     if not ids_all:
         sys.exit("no shards produced; nothing to merge")
 
     ids = np.concatenate(ids_all)
     vecs = np.vstack(vecs_all)
+    cols = np.vstack(cols_all)
     # Shards can overlap if a run was killed between write and exit.
     _, keep = np.unique(ids, return_index=True)
-    ids, vecs = ids[keep], vecs[keep]
+    ids, vecs, cols = ids[keep], vecs[keep], cols[keep]
 
+    np.save(args.out / "colors.npy", cols)
     np.save(args.out / "embeddings.npy", vecs)
     (args.out / "ids.json").write_text(json.dumps([int(i) for i in ids]))
     (args.out / "manifest.json").write_text(json.dumps({
@@ -240,13 +274,15 @@ def main() -> None:
         "failed": failed,
         "normalized": True,
         "preprocessor": backend,
+        "has_colors": True,
+        "color_sample_px": COLOR_SAMPLE,
     }, indent=2))
 
     print(f"\nD3: {len(ids):,} vectors, dim {vecs.shape[1]}, "
           f"{failed} images unfetchable")
     print(f"    {args.out/'embeddings.npy'}  "
           f"({vecs.nbytes/1e6:.1f} MB)")
-    print(f"    copy back embeddings.npy, ids.json, manifest.json")
+    print(f"    copy back embeddings.npy, colors.npy, ids.json, manifest.json")
     print(f"    the image cache at {cache} is scratch, delete it")
 
 

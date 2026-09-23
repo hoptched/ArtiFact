@@ -43,9 +43,15 @@ def load(config: Config):
                          "space than these embeddings")
     vecs = np.load(P / "embeddings.npy")
     ids = json.loads((P / "ids.json").read_text())
+    # One representative colour per work, so the zoomed-out map can render
+    # 9,101 tiles before a single image has loaded. Optional: the bundle
+    # still builds without it, the map is just grey until thumbnails land.
+    colors = np.load(P / "colors.npy") if (P / "colors.npy").exists() else None
+    if colors is None:
+        print("  no colors.npy — re-run D3 to get the mosaic colours\n")
     corpus = {r["id"]: r for r in
               (json.loads(l) for l in (P / "corpus.jsonl").open())}
-    return vecs, ids, corpus, head
+    return vecs, ids, corpus, head, colors
 
 
 def top_k_neighbors(vecs: np.ndarray, k: int) -> np.ndarray:
@@ -72,7 +78,7 @@ def top_k_neighbors(vecs: np.ndarray, k: int) -> np.ndarray:
 def main() -> None:
     config = Config.load()
     config.paths.ensure()
-    vecs, ids, corpus, head = load(config)
+    vecs, ids, corpus, head, colors = load(config)
     model, labels = head["model"], head["labels"]
     print(f"{len(ids):,} vectors, {len(corpus):,} corpus rows, "
           f"{len(labels)} style labels\n")
@@ -140,6 +146,7 @@ def main() -> None:
             "sc": round(float(confidence[i]), 3) if in_domain else None,
             "xy": [round(float(xy[i][0]), 4), round(float(xy[i][1]), 4)],
             "type": r.get("artwork_type"),
+            **({"k": "#%02x%02x%02x" % tuple(colors[i])} if colors is not None else {}),
         })
         neighbors[str(artwork_id)] = [int(ids[j]) for j in nn[i]]
         for b in r["period_bins"]:
