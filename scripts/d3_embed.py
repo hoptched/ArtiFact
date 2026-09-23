@@ -129,7 +129,7 @@ def main() -> None:
         print(f"gpu         {torch.cuda.get_device_name(0)} "
               f"(sm_{''.join(map(str, torch.cuda.get_device_capability(0)))})")
     print(f"backbone    {args.backbone}")
-    print(f"fingerprint {fp}\n")
+    print(f"fingerprint {fp}")
 
     corpus = load_corpus(args.corpus)
     already = done_ids(shard_dir)
@@ -141,6 +141,12 @@ def main() -> None:
         print("nothing to do; merging what exists")
 
     processor = CLIPImageProcessor.from_pretrained(args.backbone)
+    # Not covered by the fingerprint, but it must match across the AIC and
+    # WikiArt runs: PIL and torchvision resize differently, and vectors
+    # preprocessed two ways do not share a space. Recorded so a mismatch is
+    # visible instead of silent.
+    backend = type(processor).__name__
+    print(f"preprocess  {backend}\n")
     model = CLIPVisionModelWithProjection.from_pretrained(args.backbone)
     model.eval().to(device)
     # Frozen: no gradients anywhere, ever. The heads are trained in D4 on
@@ -233,6 +239,7 @@ def main() -> None:
         "corpus_rows": len(corpus),
         "failed": failed,
         "normalized": True,
+        "preprocessor": backend,
     }, indent=2))
 
     print(f"\nD3: {len(ids):,} vectors, dim {vecs.shape[1]}, "
