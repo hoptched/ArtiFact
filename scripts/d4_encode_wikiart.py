@@ -138,12 +138,12 @@ def main() -> None:
         name = f"data/train-{shard:05d}-of-{N_SHARDS:05d}.parquet"
         path = Path(hf_hub_download(REPO, name, repo_type="dataset"))
 
-        vecs_acc, labs_acc = [], []
-        images, labels = [], []
+        vecs_acc, labs_acc, arts_acc = [], [], []
+        images, labels, artists = [], [], []
         seen = kept = 0
 
         def flush_batch() -> None:
-            nonlocal images, labels
+            nonlocal images, labels, artists
             if not images:
                 return
             inputs = processor(images=images, return_tensors="pt")
@@ -153,13 +153,20 @@ def main() -> None:
                 v = v / v.norm(dim=-1, keepdim=True)
             vecs_acc.append(v.cpu().numpy().astype(np.float32))
             labs_acc.append(np.array(labels, dtype=np.int16))
-            images, labels = [], []
+            arts_acc.append(np.array(artists, dtype=np.int16))
+            images, labels, artists = [], [], []
 
         pf = pq.ParquetFile(path)
-        for batch in pf.iter_batches(batch_size=256, columns=["image", "style"]):
+        # artist is carried through so D4b can hold every work by one
+        # painter out together. Without it the only possible split is
+        # random, which leaks painters between train and test and measures
+        # painter recognition rather than style.
+        for batch in pf.iter_batches(batch_size=256,
+                                     columns=["image", "style", "artist"]):
             imgs = batch.column("image").to_pylist()
             styles = batch.column("style").to_pylist()
-            for blob, style in zip(imgs, styles):
+            arts = batch.column("artist").to_pylist()
+            for blob, style, art in zip(imgs, styles, arts):
                 seen += 1
                 lab = label_of[style]
                 if lab < 0:                      # a dropped postwar class
@@ -170,6 +177,7 @@ def main() -> None:
                     continue
                 images.append(img)
                 labels.append(int(lab))
+                artists.append(int(art))
                 kept += 1
                 if len(images) >= args.batch_size:
                     flush_batch()
@@ -177,7 +185,8 @@ def main() -> None:
 
         if vecs_acc:
             np.savez(target, vecs=np.vstack(vecs_acc),
-                     labels=np.concatenate(labs_acc))
+                     labels=np.concatenate(labs_acc),
+                     artists=np.concatenate(arts_acc))
         if not args.keep_parquet:
             # hf_hub_download returns a symlink under snapshots/ pointing at
             # the real file in blobs/. Deleting only the link frees nothing,
@@ -196,18 +205,23 @@ def main() -> None:
               f"{rate:5.1f} img/s  eta {left/max(rate,1e-6)/60:5.1f} min")
 
     # --- merge -----------------------------------------------------------
-    vecs_all, labs_all = [], []
+    vecs_all, labs_all, arts_all = [], [], []
     for f in sorted(shard_dir.glob("shard_*.npz")):
         z = np.load(f)
+        if "artists" not in z:
+            sys.exit(f"{f.name} predates the artist column; delete --out and re-run")
         vecs_all.append(z["vecs"])
         labs_all.append(z["labels"])
+        arts_all.append(z["artists"])
     if not vecs_all:
         sys.exit("no shards encoded")
     vecs = np.vstack(vecs_all)
     labs = np.concatenate(labs_all)
+    arts = np.concatenate(arts_all)
 
     np.save(args.out / "wikiart_embeddings.npy", vecs)
     np.save(args.out / "wikiart_labels.npy", labs)
+    np.save(args.out / "wikiart_artists.npy", arts)
 
     counts = {STYLE_LABELS[i]: int((labs == i).sum())
               for i in range(len(STYLE_LABELS))}
@@ -223,6 +237,7 @@ def main() -> None:
         "normalized": True,
         "style_labels": STYLE_LABELS,
         "class_counts": counts,
+        "n_artists": int(len(set(arts.tolist()))),
         "dropped_wikiart_styles": sorted(DROPPED_WIKIART_STYLES),
     }, indent=2))
 
@@ -237,7 +252,9 @@ def main() -> None:
         print("  expect weak per-class F1 there; consider class weighting in D4b")
 
     print(f"\nD4a: {len(labs):,} vectors, dim {vecs.shape[1]}")
-    print(f"     copy back wikiart_embeddings.npy, wikiart_labels.npy, manifest.json")
+    print(f"     {len(set(arts.tolist()))} distinct artists (for the grouped split)")
+    print(f"     copy back wikiart_embeddings.npy, wikiart_labels.npy, "
+          f"wikiart_artists.npy, manifest.json")
 
 
 if __name__ == "__main__":
