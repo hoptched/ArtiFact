@@ -106,7 +106,7 @@ Each one ends in something you can look at. Sizes assume evenings, not full days
 | D1 | Corpus harvest: walk the AIC listing endpoint, keep public-domain works with an image and a date, cache raw JSON | `data/raw/artworks.jsonl` holds ~59k records across all types; re-running is a no-op | **Done** 2026-09-22 |
 | D2 | Taxonomy + normalization: filter to painting-like, period buckets, region lookup, style label set | Coverage report prints % labeled per axis; ~9.6k works out; 50 random rows eyeballed and agreed with | **Done** 2026-09-22 |
 | D3 | Embeddings: fetch at ~336px, encode with frozen CLIP, save aligned vectors | `embeddings.npy` + id list exist; 5 nearest neighbors of a Monet are other Monets | **Done** 2026-09-23 |
-| D4 | Style classifier: encode WikiArt, train the head, report accuracy and per-class F1 | Confusion matrix saved, and you can explain its worst cell | Not started |
+| D4 | Style classifier: encode WikiArt, train the head, report accuracy and per-class F1 under both a random and an artist-grouped split | Confusion matrix saved, and you can explain its worst cell | In progress |
 | D5 | Inference + index: predict style over AIC, compute top-20 KNN and 2D UMAP | `web/public/data/` holds everything the site needs, under ~10 MB | Not started |
 | D6 | Website: grid with filters, detail page, one timeline or map view | Deployed at a URL, loads in under two seconds | Not started |
 | D7 | Stretch: CLIP text search, UMAP constellation, Met corpus merged, writeup | Only after D6 ships | Not started |
@@ -124,6 +124,10 @@ All three settled 2026-09-22, in `pipeline/taxonomy.py` (tables) and `pipeline/n
 - **Style** — 17 labels, mapped from WikiArt's 27 classes (verified against the HuggingFace dataset info, not recalled). Pointillism merges into Post-Impressionism; Analytical and Synthetic Cubism into Cubism. Seven postwar classes (Abstract Expressionism, Action painting, Color Field, Contemporary Realism, Minimalism, New Realism, Pop Art) are **dropped, not merged** — the corpus is public domain and therefore ~95% pre-1900, so a head that never sees Pop Art cannot predict it for an 1870 landscape.
 
 **Watch-out for D5/D6:** `artist_title` flattens attribution — "After Raffaello Sanzio, called Raphael" becomes plain `Raphael`, putting 18th-century copies under a painter who died in 1520. `artist_display` keeps the qualifier, so the site should show that field, not `artist_title`.
+
+**D4 must split by artist, not at random.** WikiArt's 81,444 images come from 129 artists whose styles are near-fixed — every Monet is Impressionism — so a random split puts the same painter in train and test and lets the head score well by recognising painters instead of styles. D3 already showed CLIP does this readily: 18.1% of nearest neighbours share an artist. The AIC corpus is mostly painters absent from WikiArt's 129, so a random-split number would flatter the model and then disappoint in D5. Report both splits, lead with the artist-grouped one, and treat the gap between them as a result in its own right: it measures how much of the score is style versus painter recognition.
+
+**The shards are ordered by artist, so never split by shard.** Sampling offsets 0-11,000 returns only low-index artists (Renoir, Van Gogh, Rembrandt, Monet, Aivazovsky), which is why encoding shards 0-1 yields 629 Impressionism and zero Renaissance, Rococo or Ukiyo-e. A trial on the first few shards says nothing about global class balance.
 
 **D3 ran 2026-09-23 on a DGX Spark (GB10, sm_121, aarch64).** `scripts/d3_embed.py`, torch 2.14+cu130, batch 512: 9,101 vectors of 9,132 in under two minutes at 84.7 img/s, bounded by AIC's image server rather than the GPU. 31 images were unfetchable (0.34%), skewed Japanese (16) — large screens and scrolls whose IIIF derivative did not resolve.
 
