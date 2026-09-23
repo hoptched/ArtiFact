@@ -28,3 +28,6 @@ web/dist/
 # deploy. Capped at ~10 MB by design; commit them on their own, never mixed
 # with code changes.
 !web/public/data/
+
+# Vite build output (web/dist is already ignored above)
+web/node_modules/

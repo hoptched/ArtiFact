@@ -172,7 +172,9 @@ def main() -> None:
             "wrong rather than uncertain."),
         "style_labels": labels,
         "precision_levels": ["exact", "loose", "vague"],
-        "iiif": "https://www.artic.edu/iiif/2/{image_id}/full/{width},/0/default.jpg",
+        # Confined sizing: AIC 403s any request that would upscale, so a
+        # fixed width breaks for every work narrower than it.
+        "iiif": "https://www.artic.edu/iiif/2/{image_id}/full/!{width},{width}/0/default.jpg",
         "counts": {"works": len(works), "neighbors_per_work": k},
     }, indent=2, ensure_ascii=False))
 

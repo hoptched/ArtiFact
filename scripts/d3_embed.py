@@ -37,7 +37,14 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-IIIF = "https://www.artic.edu/iiif/2/{image_id}/full/{width},/0/default.jpg"
+# Confined sizing (!w,h), not sizeByW. AIC's IIIF server refuses any
+# request that would upscale: "Requests for scales in excess of 100% are
+# not allowed", HTTP 403. Asking for a fixed width therefore fails for
+# every work narrower than it, which is not a rare edge case here — it is
+# hanging scrolls, 235x768 and the like, and it silently cost 31 works
+# including 16 of the Japanese ones. !w,h fits inside the box instead and
+# never upscales.
+IIIF = "https://www.artic.edu/iiif/2/{image_id}/full/!{width},{width}/0/default.jpg"
 
 # Side length the image is squashed to before averaging. Small enough to be
 # free, large enough that a thin bright frame does not dominate.

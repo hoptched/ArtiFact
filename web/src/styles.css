@@ -1,0 +1,162 @@
+:root {
+  --bg: #0d0d0f;
+  --panel: #16161a;
+  --line: #2a2a31;
+  --ink: #ece9e4;
+  --muted: #9a958d;
+  --accent: #f5c451;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; margin: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+.app { position: relative; height: 100%; }
+
+.map {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+  cursor: grab;
+}
+.map:active { cursor: grabbing; }
+
+.status {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  color: var(--muted);
+}
+
+/* Chrome floats over the canvas; the map is the page. */
+.chrome {
+  position: absolute;
+  z-index: 2;
+  background: color-mix(in srgb, var(--panel) 82%, transparent);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+header.chrome { top: 16px; left: 16px; max-width: 19rem; }
+header.chrome h1 { margin: 0; font-size: 1.05rem; letter-spacing: 0.02em; }
+header.chrome p { margin: 4px 0 0; color: var(--muted); font-size: 0.8rem; }
+
+.switcher {
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 8px 10px;
+}
+.switcher button {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 5px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.switcher button:hover { color: var(--ink); }
+.switcher button.on {
+  background: var(--accent);
+  color: #1a1408;
+  font-weight: 600;
+}
+
+.detail {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  right: 0;
+  width: min(25rem, 100%);
+  height: 100%;
+  overflow-y: auto;
+  background: var(--panel);
+  border-left: 1px solid var(--line);
+  padding: 18px 20px 28px;
+}
+.detail .close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  border: none;
+  background: rgba(0,0,0,0.45);
+  color: var(--ink);
+  font-size: 1.4rem;
+  line-height: 1;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+.detail .hero {
+  width: 100%;
+  border-radius: 8px;
+  display: block;
+  margin-bottom: 14px;
+}
+.detail h2 { margin: 0 0 2px; font-size: 1.1rem; line-height: 1.3; }
+.detail .artist { margin: 0 0 14px; color: var(--muted); font-size: 0.87rem; }
+.detail h3 {
+  margin: 22px 0 8px;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--muted);
+}
+
+dl { margin: 0; display: grid; grid-template-columns: 4.6rem 1fr; gap: 7px 10px; }
+dt {
+  color: var(--muted);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  padding-top: 2px;
+}
+dd { margin: 0; font-size: 0.87rem; }
+
+.muted { color: var(--muted); }
+.small { font-size: 0.75rem; }
+.note { display: block; margin-top: 4px; font-size: 0.75rem; line-height: 1.45; }
+
+.predicted { color: var(--accent); font-weight: 600; }
+.withheld { color: var(--muted); font-style: italic; }
+
+.conf { display: inline-flex; align-items: center; gap: 3px; margin-left: 8px; }
+.conf i {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--line); display: inline-block;
+}
+.conf i.on { background: var(--accent); }
+.conf em { font-style: normal; color: var(--muted); font-size: 0.72rem; margin-left: 4px; }
+
+.similar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.similar button {
+  padding: 0; border: 1px solid var(--line); background: none;
+  border-radius: 6px; overflow: hidden; cursor: pointer; aspect-ratio: 1;
+}
+.similar button:hover { border-color: var(--accent); }
+.similar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+@media (max-width: 700px) {
+  .detail { width: 100%; height: 62%; top: auto; bottom: 0; border-left: none; border-top: 1px solid var(--line); }
+  header.chrome { max-width: calc(100% - 32px); }
+}
