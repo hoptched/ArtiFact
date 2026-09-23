@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { MapCanvas } from "./MapCanvas";
+import type { Focus } from "./MapCanvas";
 import { Detail } from "./Detail";
 import { useBundle } from "./useData";
 import type { Facet } from "./types";
@@ -25,6 +26,8 @@ export default function App() {
   const { bundle, error } = useBundle();
   const [facet, setFacet] = useState<Facet>("similarity");
   const [selected, setSelected] = useState<number | null>(null);
+  const [focus, setFocus] = useState<Focus | null>(null);
+  const regions = bundle?.layouts.facets[facet].regions ?? [];
 
   if (error) return <div className="status">Could not load the map: {error}</div>;
   if (!bundle) return <div className="status">Loading 9,101 works…</div>;
@@ -36,6 +39,7 @@ export default function App() {
         facet={facet}
         selected={selected}
         onSelect={setSelected}
+        focus={focus}
       />
 
       <header className="chrome">
@@ -61,6 +65,32 @@ export default function App() {
           </button>
         ))}
       </nav>
+
+      {regions.length > 0 && (
+        <nav className="chrome regions">
+          <span className="muted small">Jump to</span>
+          <ul>
+            {regions.map((r) => (
+              <li key={r.name}>
+                <button
+                  onClick={() =>
+                    setFocus({ x: r.c[0], y: r.c[1], r: r.r, key: Date.now() })
+                  }
+                >
+                  <span>{r.name}</span>
+                  <em>{r.n.toLocaleString()}</em>
+                </button>
+              </li>
+            ))}
+          </ul>
+          <button
+            className="reset"
+            onClick={() => setFocus({ x: 0.5, y: 0.5, r: 0.5, key: Date.now() })}
+          >
+            Whole map
+          </button>
+        </nav>
+      )}
 
       {selected !== null && (
         <Detail

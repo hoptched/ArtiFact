@@ -167,3 +167,59 @@ dd { margin: 0; font-size: 0.87rem; }
   .detail { width: 100%; height: 62%; top: auto; bottom: 0; border-left: none; border-top: 1px solid var(--line); }
   header.chrome { max-width: calc(100% - 32px); }
 }
+
+/* Region jump list. The style map puts Fauvism a third of a map away from
+   anything else, which is honest — it looks like nothing else in the
+   collection — but it needs a way to get there that is not panning. */
+.regions {
+  top: 16px;
+  right: 16px;
+  width: 13.5rem;
+  max-height: calc(100% - 32px);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 8px 8px 12px;
+}
+.regions ul {
+  list-style: none;
+  margin: 0;
+  padding: 0 4px 0 0;
+  overflow-y: auto;
+  min-height: 0;
+}
+.regions li + li { margin-top: 1px; }
+.regions ul button {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  background: none;
+  border: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.8rem;
+  text-align: left;
+  padding: 4px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.regions ul button:hover { background: rgba(255, 255, 255, 0.07); }
+.regions ul button em { font-style: normal; color: var(--muted); font-size: 0.72rem; }
+.regions .reset {
+  margin-top: 2px;
+  background: none;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.75rem;
+  padding: 5px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.regions .reset:hover { color: var(--ink); border-color: var(--muted); }
+
+@media (max-width: 700px) {
+  .regions { display: none; }
+}

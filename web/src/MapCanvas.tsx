@@ -15,13 +15,16 @@ const ANIM_MS = 750;
 const easeInOut = (t: number) =>
   t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
+export interface Focus { x: number; y: number; r: number; key: number }
+
 export function MapCanvas({
-  bundle, facet, selected, onSelect,
+  bundle, facet, selected, onSelect, focus,
 }: {
   bundle: Bundle;
   facet: Facet;
   selected: number | null;
   onSelect: (index: number | null) => void;
+  focus: Focus | null;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const viewRef = useRef<View>({ x: 0.5, y: 0.5, scale: 0 });
@@ -34,6 +37,7 @@ export function MapCanvas({
   const toRef = useRef<Float32Array>(new Float32Array(0));
   const animRef = useRef<{ start: number } | null>(null);
   const dragRef = useRef<{ x: number; y: number; moved: boolean } | null>(null);
+  const flyRef = useRef<{ from: View; to: View; start: number } | null>(null);
 
   const { works, layouts, atlasMeta, sheets, facets, hires } = bundle;
   const radius = layouts.work_radius;
@@ -95,6 +99,23 @@ export function MapCanvas({
       frame = requestAnimationFrame(draw);
       const ctx = canvas.getContext("2d");
       if (!ctx || posRef.current.length === 0) return;
+
+      // Flying to a region: interpolate the scale in log space, so the
+      // journey feels like a steady zoom rather than a slow crawl that
+      // suddenly accelerates.
+      const fly = flyRef.current;
+      if (fly) {
+        const p = Math.min(1, (performance.now() - fly.start) / 900);
+        const e = easeInOut(p);
+        const v = viewRef.current;
+        v.x = fly.from.x + (fly.to.x - fly.from.x) * e;
+        v.y = fly.from.y + (fly.to.y - fly.from.y) * e;
+        v.scale = Math.exp(
+          Math.log(fly.from.scale)
+          + (Math.log(fly.to.scale) - Math.log(fly.from.scale)) * e,
+        );
+        if (p >= 1) flyRef.current = null;
+      }
 
       const anim = animRef.current;
       if (anim) {
@@ -269,7 +290,21 @@ export function MapCanvas({
     frame = requestAnimationFrame(draw);
     return () => { cancelAnimationFrame(frame); ro.disconnect(); };
   }, [works, layouts, facet, atlasMeta, sheets, radius, selected, fit, ready,
-      images, hires, hiAtlas]);
+      images, hires, hiAtlas, focus]);
+
+  useEffect(() => {
+    if (!focus) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    // Fit the region, with a little air around it.
+    const target = Math.min(rect.width, rect.height) / (focus.r * 2.6);
+    flyRef.current = {
+      from: { ...viewRef.current },
+      to: { x: focus.x, y: focus.y, scale: target },
+      start: performance.now(),
+    };
+  }, [focus]);
 
   // --- interaction -------------------------------------------------------
   const toWorld = (clientX: number, clientY: number) => {
@@ -283,6 +318,7 @@ export function MapCanvas({
   };
 
   const onWheel = (e: React.WheelEvent) => {
+    flyRef.current = null;
     const before = toWorld(e.clientX, e.clientY);
     const view = viewRef.current;
     const next = view.scale * Math.exp(-e.deltaY * 0.0016);
@@ -295,6 +331,7 @@ export function MapCanvas({
 
   const onPointerDown = (e: React.PointerEvent) => {
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    flyRef.current = null;      // any interaction cancels a flight
     dragRef.current = { x: e.clientX, y: e.clientY, moved: false };
   };
 
