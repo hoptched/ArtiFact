@@ -41,6 +41,10 @@ def work_radius(n: int) -> float:
     return float(np.sqrt(PACKING * DISC_R ** 2 / max(n, 1)))
 
 
+FALLBACK_REGIONS = {"Other Asia", "Other Europe", "Africa",
+                    "Latin America", "Oceania"}
+
+
 def group_country(country: str, small: set[str]) -> str:
     """Countries too thin to be their own region fall back to a bucket."""
     if country not in small:
@@ -77,18 +81,34 @@ def facet_values(works: list[dict], facet: str) -> list[str]:
         counts: dict[str, int] = {}
         for w in works:
             counts[w["p"]] = counts.get(w["p"], 0) + 1
-        big = sorted(int(k.split("\u2013")[0]) for k, n in counts.items()
-                     if n >= MIN_REGION)
+        keep = {k for k, n in counts.items() if n >= MIN_REGION}
+        big = sorted(int(k.split("\u2013")[0]) for k in keep)
         first, last = big[0], big[-1]
+        label_of = {int(k.split("\u2013")[0]): k for k in keep}
+
+        # A merged end-bucket only earns its own region if it is big
+        # enough to be one. "Before 1450" holds 120 works and is a real
+        # part of the collection; "1900 and later" held exactly one, and a
+        # labelled region for a single work is just noise on the map.
+        ends = {"before": 0, "after": 0}
+        for w in works:
+            if counts[w["p"]] >= MIN_REGION:
+                continue
+            side = "before" if int(w["p"].split("\u2013")[0]) < first else "after"
+            ends[side] += 1
+
         out = []
         for w in works:
-            start = int(w["p"].split("\u2013")[0])
             if counts[w["p"]] >= MIN_REGION:
                 out.append(w["p"])
-            elif start < first:
-                out.append(f"Before {first}")
+                continue
+            start = int(w["p"].split("\u2013")[0])
+            if start < first:
+                out.append(f"Before {first}" if ends["before"] >= MIN_REGION
+                           else label_of[first])
             else:
-                out.append(f"{last} and later")
+                out.append(f"{last} and later" if ends["after"] >= MIN_REGION
+                           else label_of[last])
         return out
     if facet == "style":
         return [w["s"] or "Outside the taxonomy" for w in works]
@@ -97,7 +117,23 @@ def facet_values(works: list[dict], facet: str) -> list[str]:
         for w in works:
             counts[w["c"]] = counts.get(w["c"], 0) + 1
         small = {c for c, n in counts.items() if n < MIN_REGION}
-        return [group_country(w["c"], small) for w in works]
+        grouped = [group_country(w["c"], small) for w in works]
+
+        # The continental fallbacks can themselves come out tiny — Oceania
+        # and Latin America hold one work each — and a region of one is
+        # not a region. Anything still short is swept into the largest
+        # fallback rather than getting its own label.
+        after: dict[str, int] = {}
+        for g in grouped:
+            after[g] = after.get(g, 0) + 1
+        fallbacks = {g for g in after if g in FALLBACK_REGIONS}
+        thin = {g for g in fallbacks if after[g] < MIN_REGION}
+        if thin:
+            survivors = fallbacks - thin
+            target = (max(survivors, key=lambda g: after[g]) if survivors
+                      else max(after, key=lambda g: after[g]))
+            grouped = [target if g in thin else g for g in grouped]
+        return grouped
     raise ValueError(f"unknown facet {facet!r}")
 
 
