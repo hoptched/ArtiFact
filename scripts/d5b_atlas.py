@@ -103,7 +103,6 @@ def main() -> None:
             if path.exists():
                 return path.read_bytes()
         if session is None:
-            import httpx
             return None
         try:
             r = session.get(IIIF.format(image_id=image_id, width=FETCH_WIDTH),
