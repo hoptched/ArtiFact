@@ -1,1 +1,1 @@
-{"root":["./src/App.tsx","./src/Detail.tsx","./src/MapCanvas.tsx","./src/imageCache.ts","./src/main.tsx","./src/types.ts","./src/useData.ts"],"version":"5.9.3"}
+{"root":["./src/App.tsx","./src/Detail.tsx","./src/MapCanvas.tsx","./src/hiresAtlas.ts","./src/imageCache.ts","./src/main.tsx","./src/types.ts","./src/useData.ts"],"version":"5.9.3"}

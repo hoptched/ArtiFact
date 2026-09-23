@@ -26,6 +26,7 @@ import numpy as np
 
 from pipeline.config import Config
 from pipeline import layout
+from pipeline.spatial_order import hilbert_order, locality
 from pipeline.taxonomy import OUTSIDE_TAXONOMY, period_label, style_applies
 
 KNN_CHUNK = 512          # rows of the similarity matrix held at once
@@ -208,6 +209,22 @@ def main() -> None:
             "region_of": labels,
         }
         print(f"  layout {facet:<8} {len(sizes):>3} regions")
+    # --- pack order for the lazily-loaded high-resolution atlas ----------
+    # Hilbert order through the UMAP plane, so a screenful of the map lives
+    # in a few sheets rather than all of them: measured 3.5 sheets against
+    # 40 for ids order at 100 tiles a sheet.
+    umap_xy = np.array([w["xy"] for w in works])
+    order = hilbert_order(umap_xy)
+    slot_of = np.empty(len(order), dtype=np.int64)
+    slot_of[order] = np.arange(len(order))
+    (out / "hires_slots.json").write_text(json.dumps(
+        [int(v) for v in slot_of], separators=(",", ":")))
+    (config.paths.processed / "hires_order.json").write_text(json.dumps(
+        [int(works[i]["id"]) for i in order]))
+    print(f"  hires pack order: a map neighbourhood spans "
+          f"{locality(order, umap_xy, 100):.1f} sheets "
+          f"(vs {locality(np.arange(len(works)), umap_xy, 100):.1f} unordered)")
+
     (out / "layouts.json").write_text(json.dumps({
         "work_radius": round(layout.work_radius(len(works)), 5),
         "facets": layouts,
@@ -215,9 +232,10 @@ def main() -> None:
 
     total = sum((out / f).stat().st_size
                 for f in ("works.json", "neighbors.json", "facets.json",
-                          "layouts.json"))
+                          "layouts.json", "hires_slots.json"))
     print(f"\n=== bundle ===")
-    for f in ("works.json", "neighbors.json", "facets.json", "layouts.json"):
+    for f in ("works.json", "neighbors.json", "facets.json", "layouts.json",
+              "hires_slots.json"):
         print(f"  {f:<16} {(out/f).stat().st_size/1e6:6.2f} MB")
     print(f"  {'total':<16} {total/1e6:6.2f} MB   "
           f"(cap {config.site.max_bundle_mb} MB)")

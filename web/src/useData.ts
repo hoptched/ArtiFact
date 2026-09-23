@@ -8,6 +8,7 @@ export interface Bundle {
   neighbors: Record<string, number[]>;
   atlasMeta: AtlasMeta;
   sheets: HTMLImageElement[];
+  hires: { meta: AtlasMeta; slots: number[] } | null;
 }
 
 const base = import.meta.env.BASE_URL;
@@ -47,7 +48,20 @@ export function useBundle() {
         if (cancelled) return;
         const neighbors = await json<Record<string, number[]>>("data/neighbors.json");
         const sheets: HTMLImageElement[] = [];
-        setBundle({ works, layouts, facets, neighbors, atlasMeta, sheets });
+        setBundle({ works, layouts, facets, neighbors, atlasMeta, sheets,
+                    hires: null });
+
+        // Optional: the map works without it, just softer when zoomed in.
+        Promise.all([
+          json<AtlasMeta>("atlas/hires.json"),
+          json<number[]>("data/hires_slots.json"),
+        ])
+          .then(([meta, slots]) => {
+            if (!cancelled) {
+              setBundle((b) => (b ? { ...b, hires: { meta, slots } } : b));
+            }
+          })
+          .catch(() => { /* no high-resolution atlas built yet */ });
 
         for (let s = 0; s < atlasMeta.sheets; s++) {
           const img = await loadImage(

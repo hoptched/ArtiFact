@@ -46,6 +46,7 @@ export interface Facets {
 }
 
 export interface AtlasMeta {
+  prefix?: string;
   tile: number;
   sheet_px: number;
   grid: number;

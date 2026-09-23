@@ -70,6 +70,11 @@ def main() -> None:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--ids", type=Path, required=True,
                     help="ids.json from D3; its order defines tile indices")
+    ap.add_argument("--order", type=Path,
+                    help="artwork ids in pack order, overriding --ids order. "
+                         "Used for the high-resolution atlas, which is packed "
+                         "spatially so a lazily-loaded sheet is worth loading.")
+    ap.add_argument("--prefix", default="atlas")
     ap.add_argument("--corpus", type=Path, required=True,
                     help="corpus.jsonl; maps a work id to its IIIF image id")
     ap.add_argument("--out", type=Path, required=True)
@@ -87,6 +92,11 @@ def main() -> None:
     args = ap.parse_args()
 
     ids = json.loads(args.ids.read_text())
+    if args.order:
+        packed = json.loads(args.order.read_text())
+        if sorted(packed) != sorted(ids):
+            sys.exit("--order and --ids cover different works")
+        ids = packed
     grid = args.sheet_px // args.tile
     per_sheet = grid * grid
     sheets = (len(ids) + per_sheet - 1) // per_sheet
@@ -153,12 +163,12 @@ def main() -> None:
                     continue
                 canvas.paste(square(img, args.tile),
                              ((n % grid) * args.tile, (n // grid) * args.tile))
-            path = args.out / f"atlas_{sheet:03d}.jpg"
+            path = args.out / f"{args.prefix}_{sheet:03d}.jpg"
             canvas.save(path, "JPEG", quality=args.quality, optimize=True)
             print(f"  {path.name}  {len(chunk):>5,} tiles  "
                   f"{path.stat().st_size/1e6:5.2f} MB")
 
-    (args.out / "atlas.json").write_text(json.dumps({
+    (args.out / f"{args.prefix}.json").write_text(json.dumps({
         "tile": args.tile,
         "sheet_px": args.sheet_px,
         "grid": grid,
@@ -166,15 +176,17 @@ def main() -> None:
         "sheets": sheets,
         "count": len(ids),
         "missing": missing,
-        "note": "tile index == position in ids.json; "
+        "prefix": args.prefix,
+        "ordered": bool(args.order),
+        "note": "tile index == position in the pack order; "
                 "sheet = i // per_sheet, col = i % grid, row = (i % per_sheet) // grid",
     }, indent=2))
 
-    total = sum((args.out / f"atlas_{s:03d}.jpg").stat().st_size
+    total = sum((args.out / f"{args.prefix}_{s:03d}.jpg").stat().st_size
                 for s in range(sheets))
     print(f"\nD5b: {sheets} sheets, {total/1e6:.2f} MB total, "
           f"{missing} tiles missing")
-    print(f"     copy back atlas_*.jpg and atlas.json")
+    print(f"     copy back {args.prefix}_*.jpg and {args.prefix}.json")
 
 
 if __name__ == "__main__":

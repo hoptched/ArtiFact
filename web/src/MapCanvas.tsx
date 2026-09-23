@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Bundle } from "./useData";
 import type { Facet } from "./types";
 import { ImageCache, TIER2_MIN_PX } from "./imageCache";
+import { HiResAtlas } from "./hiresAtlas";
 
 interface View { x: number; y: number; scale: number }
 
@@ -34,9 +35,13 @@ export function MapCanvas({
   const animRef = useRef<{ start: number } | null>(null);
   const dragRef = useRef<{ x: number; y: number; moved: boolean } | null>(null);
 
-  const { works, layouts, atlasMeta, sheets, facets } = bundle;
+  const { works, layouts, atlasMeta, sheets, facets, hires } = bundle;
   const radius = layouts.work_radius;
   const images = useMemo(() => new ImageCache(facets.iiif), [facets.iiif]);
+  const hiAtlas = useMemo(
+    () => (hires ? new HiResAtlas(import.meta.env.BASE_URL, hires.meta) : null),
+    [hires],
+  );
 
   const flatten = useCallback((f: Facet) => {
     const xy = layouts.facets[f].xy;
@@ -129,7 +134,14 @@ export function MapCanvas({
       // Derive the switch point from the atlas actually loaded rather than
       // a constant, so re-running D5b at a different tile size needs no
       // client change.
-      const wantReal = size >= Math.max(TIER2_MIN_PX, tile * 0.9);
+      // Tier order by cost: the 64px atlas is already in memory, the
+      // high-resolution atlas is a sheet fetch that serves ~100 works at
+      // once, and IIIF is one request per work. Use the cheapest that is
+      // sharp enough.
+      const hiTile = hires?.meta.tile ?? 0;
+      const wantHi = hires !== null && size >= tile * 0.9;
+      const wantReal = size >= Math.max(TIER2_MIN_PX, hiTile * 0.9 || tile * 0.9);
+      const hiWanted = new Set<number>();
       // Collected during the draw and requested after it, nearest to the
       // centre of the screen first, so what you are looking at arrives
       // before what is at the edge.
@@ -173,6 +185,26 @@ export function MapCanvas({
           }
         }
 
+        if (wantHi && hires && hiAtlas) {
+          const slot = hires.slots[i];
+          hiWanted.add(hiAtlas.sheetOf(slot));
+          const sheet = hiAtlas.get(slot);
+          if (sheet) {
+            const g = hires.meta.grid, ht = hires.meta.tile;
+            const within = slot % hires.meta.per_sheet;
+            const iw = ar >= 1 ? ht : ht * ar;
+            const ih = ar >= 1 ? ht / ar : ht;
+            ctx.drawImage(
+              sheet,
+              (within % g) * ht + (ht - iw) / 2,
+              ((within / g) | 0) * ht + (ht - ih) / 2,
+              iw, ih,
+              px - hw, py - hh, tw, th,
+            );
+            continue;
+          }
+        }
+
         const sheetIndex = (i / per_sheet) | 0;
         const sheet = useThumbs ? sheets[sheetIndex] : undefined;
         if (sheet) {
@@ -204,6 +236,8 @@ export function MapCanvas({
         }
       }
 
+      if (hiAtlas && hiWanted.size) hiAtlas.pump(hiWanted);
+
       if (selected !== null) {
         const px = (pos[selected * 2] - vx) * s + cx;
         const py = (pos[selected * 2 + 1] - vy) * s + cy;
@@ -234,7 +268,8 @@ export function MapCanvas({
     };
     frame = requestAnimationFrame(draw);
     return () => { cancelAnimationFrame(frame); ro.disconnect(); };
-  }, [works, layouts, facet, atlasMeta, sheets, radius, selected, fit, ready, images]);
+  }, [works, layouts, facet, atlasMeta, sheets, radius, selected, fit, ready,
+      images, hires, hiAtlas]);
 
   // --- interaction -------------------------------------------------------
   const toWorld = (clientX: number, clientY: number) => {
