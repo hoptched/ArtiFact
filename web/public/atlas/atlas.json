@@ -1,0 +1,10 @@
+{
+  "tile": 32,
+  "sheet_px": 2048,
+  "grid": 64,
+  "per_sheet": 4096,
+  "sheets": 3,
+  "count": 9101,
+  "missing": 0,
+  "note": "tile index == position in ids.json; sheet = i // per_sheet, col = i % grid, row = (i % per_sheet) // grid"
+}
