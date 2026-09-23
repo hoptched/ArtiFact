@@ -215,3 +215,41 @@ DROPPED_WIKIART_STYLES = {
 }
 
 STYLE_LABELS: list[str] = sorted(set(WIKIART_STYLE_MAP.values()))
+
+
+# --- Where the style taxonomy applies -------------------------------------
+# The 17 labels are 16 European movements plus Ukiyo-e. They describe
+# Western painting c.1400-1900 and, for Ukiyo-e, the Japanese woodblock
+# tradition. They describe nothing else.
+#
+# Measured on the AIC corpus 2026-09-23: Chinese works were predicted
+# Ukiyo-e 161 times out of 193, Tibetan thangkas 12 of 19, at a mean
+# confidence of 0.73. Ukiyo-e is simply the only non-European class
+# available, so everything East Asian falls into it. A confidence
+# threshold cannot catch this — the model is confidently wrong, not
+# uncertain — so the domain has to be declared rather than inferred.
+#
+# Japan is deliberately in: 144 of 162 Japanese works were predicted
+# Ukiyo-e at 0.814 confidence, which is correct.
+STYLE_DOMAIN_COUNTRIES: frozenset[str] = frozenset({
+    # Western Europe and its settler traditions
+    "France", "Italy", "United Kingdom", "Ireland", "Netherlands", "Belgium",
+    "Germany", "Austria", "Switzerland", "Spain", "Greece",
+    "Sweden", "Denmark", "Norway", "Finland", "Hungary", "Czech Republic",
+    "Russia", "United States", "Australia",
+    "Europe (unspecified)",
+    # The one non-European tradition the taxonomy actually covers
+    "Japan",
+})
+
+OUTSIDE_TAXONOMY = "Outside the taxonomy"
+
+
+def style_applies(country: str) -> bool:
+    """Whether a style prediction for this work can mean anything.
+
+    A country the taxonomy does not cover gets no style rather than a
+    confident falsehood. Period and country are observed facts and remain
+    browsable either way.
+    """
+    return country in STYLE_DOMAIN_COUNTRIES

@@ -107,7 +107,7 @@ Each one ends in something you can look at. Sizes assume evenings, not full days
 | D2 | Taxonomy + normalization: filter to painting-like, period buckets, region lookup, style label set | Coverage report prints % labeled per axis; ~9.6k works out; 50 random rows eyeballed and agreed with | **Done** 2026-09-22 |
 | D3 | Embeddings: fetch at ~336px, encode with frozen CLIP, save aligned vectors | `embeddings.npy` + id list exist; 5 nearest neighbors of a Monet are other Monets | **Done** 2026-09-23 |
 | D4 | Style classifier: encode WikiArt, train the head, report accuracy and per-class F1 under both a random and an artist-grouped split | Confusion matrix saved, and you can explain its worst cell | **Done** 2026-09-23 |
-| D5 | Inference + index: predict style over AIC, compute top-20 KNN and 2D UMAP | `web/public/data/` holds everything the site needs, under ~10 MB | Not started |
+| D5 | Inference + index: predict style over AIC, compute top-20 KNN and 2D UMAP | `web/public/data/` holds everything the site needs, under ~10 MB | **Done** 2026-09-23 |
 | D6 | Website: grid with filters, detail page, one timeline or map view | Deployed at a URL, loads in under two seconds | Not started |
 | D7 | Stretch: CLIP text search, UMAP constellation, Met corpus merged, writeup | Only after D6 ships | Not started |
 
@@ -151,6 +151,12 @@ Acceptance: *Poppy Field (Giverny)* returns three Monets in its top five, the ot
 **Preprocessing backend must match across D3 and D4.** transformers 5.x falls back to `CLIPImageProcessorPil` when torchvision is absent, and PIL and torchvision resize differently, so vectors preprocessed two ways do not share a space. The fingerprint does not cover this; `manifest.json` records it. The AIC run used `CLIPImageProcessor` (torchvision), and the WikiArt run must too.
 
 **D3 is the only compute-heavy step, and it runs elsewhere.** Write it as a self-contained, batched, resumable script that takes the D2 output and depends on nothing else in the local environment. It should run unattended in Colab or on a remote box, and `embeddings.npy` plus the id list should be the only things you copy back. Pin the backbone name and image size in `config.yaml` so the remote run and the local corpus can never drift apart.
+
+**D5 results, 2026-09-23.** 9,101 works, bundle 4.05 MB against the 10 MB cap: `works.json` 2.82, `neighbors.json` 1.23, `facets.json` 0.01. Neighbours share a country 47.7% of the time and overlap in period 58.6%, neither of which the model was given.
+
+**Style is withheld outside the taxonomy's domain — 385 works, 4.2%.** The 17 labels are 16 European movements plus Ukiyo-e, and Ukiyo-e is the only non-European class, so everything East Asian collapses into it: Chinese works were predicted Ukiyo-e 161 times of 193, Tibetan thangkas 12 of 19, at 0.73 mean confidence. **A confidence threshold cannot catch this**, because the head is confidently wrong rather than uncertain, so `taxonomy.STYLE_DOMAIN_COUNTRIES` declares the domain explicitly. Japan stays in: 144 of 162 predicted Ukiyo-e at 0.814, which is right. Period and country are observed facts and stay browsable for all 9,101.
+
+Confidence is shown, never thresholded, per the decision of 2026-09-23. Western drawings predict at 0.421 against 0.576 for paintings, with 27% funnelled into Baroque — real but not disqualifying, and the reader can see it.
 
 **D6 minimum views**: a grid filtered on period x region x style with a confidence toggle; a detail page with the large IIIF image, all metadata, the predicted style clearly marked as predicted, and a visually-similar row from the KNN; and one of timeline or map, not both.
 
