@@ -137,6 +137,78 @@ def region_centres(vecs: np.ndarray, labels: list[str]) -> dict[str, np.ndarray]
     return dict(zip(names, xy))
 
 
+# Facets whose regions have a genuine one-dimensional order, laid out
+# along an arc instead of freely in the plane.
+ARC_FACETS = {"period"}
+
+
+def _period_sort_key(label: str) -> int:
+    """Chronological order of a period label, for the two merged buckets
+    and the ordinary "1500-1549" form alike. Used only to decide which way
+    round to draw the arc, never which order the regions go in."""
+    if label.startswith("Before"):
+        return -9999
+    if "later" in label:
+        return 9999
+    return int(label.split("\u2013")[0])
+ARC_SWEEP = 1.5 * np.pi     # 270 degrees, so the two ends never meet
+
+
+def arc_centres(mds: dict[str, np.ndarray], sizes: dict[str, int],
+                earliest_first: list[str] | None = None,
+                ) -> tuple[dict[str, np.ndarray], dict[str, float]]:
+    """Place regions along an arc, ordered by the first similarity axis.
+
+    For period the similarity structure is 93% one-dimensional and that
+    axis tracks chronology at 0.993, so a free 2D placement spends its
+    second axis on 7% signal and then inflates it to 15% by shoving
+    regions sideways to make room — displacing each one by about its own
+    radius. The result invites the question "what is the y axis?" and has
+    no good answer.
+
+    The order here still comes from the pixels, not from the dates: the
+    regions are sorted along MDS axis 1 exactly as before. Only the
+    direction of travel consults the labels, so that time reads forwards
+    rather than backwards, which changes nothing about what was found.
+
+    An arc rather than a line because a straight chronological line needs
+    a span of about 3, at which point normalising shrinks every region
+    below the area its works need.
+    """
+    names = list(mds)
+    M = np.vstack([mds[n] for n in names])
+    centred = M - M.mean(axis=0)
+    _, _, vt = np.linalg.svd(centred, full_matrices=False)
+    along = centred @ vt[0]
+
+    if earliest_first is not None:
+        rank = {n: i for i, n in enumerate(earliest_first)}
+        known = [i for i, n in enumerate(names) if n in rank]
+        if len(known) > 2:
+            a = np.array([rank[names[i]] for i in known], dtype=float)
+            b = along[known]
+            if np.corrcoef(a, b)[0, 1] < 0:
+                along = -along
+
+    order = np.argsort(along)
+    total = sum(sizes.values())
+    rad = {n: DISC_R * np.sqrt(sizes[n] / total) for n in names}
+
+    # Walk the arc, giving each region room for its own diameter.
+    length = 2.0 * sum(rad.values())
+    radius = length / ARC_SWEEP
+    centres: dict[str, np.ndarray] = {}
+    travelled = 0.0
+    for i in order:
+        name = names[i]
+        travelled += rad[name]
+        theta = ARC_SWEEP * (travelled / length) - ARC_SWEEP / 2
+        centres[name] = np.array([radius * np.sin(theta),
+                                  -radius * np.cos(theta)])
+        travelled += rad[name]
+    return centres, rad
+
+
 def pack_regions(centres: dict[str, np.ndarray], sizes: dict[str, int],
                  iters: int = 300, anchor: float = 0.08
                  ) -> tuple[dict[str, np.ndarray], dict[str, float]]:
@@ -271,7 +343,14 @@ def build(vecs: np.ndarray, works: list[dict], facet: str) -> tuple:
     for l in labels:
         sizes[l] = sizes.get(l, 0) + 1
 
-    centres, radii = pack_regions(region_centres(vecs, labels), sizes)
+    mds = region_centres(vecs, labels)
+    if facet in ARC_FACETS:
+        # Already non-overlapping by construction, so no packing pass —
+        # which is what was displacing regions and muddying the axis.
+        centres, radii = arc_centres(
+            mds, sizes, earliest_first=sorted(sizes, key=_period_sort_key))
+    else:
+        centres, radii = pack_regions(mds, sizes)
 
     def to_unit(p, c, r):
         lo = p.min(axis=0)
