@@ -186,20 +186,22 @@ def main() -> None:
     pending_ids: list[int] = []
     pending_vecs: list["np.ndarray"] = []
     pending_cols: list[tuple[int, int, int]] = []
+    pending_dims: list[tuple[int, int]] = []
     shard_n = len(list(shard_dir.glob("shard_*.npz")))
     failed = 0
     started = time.time()
 
     def flush() -> None:
-        nonlocal shard_n, pending_ids, pending_vecs, pending_cols
+        nonlocal shard_n, pending_ids, pending_vecs, pending_cols, pending_dims
         if not pending_ids:
             return
         np.savez(shard_dir / f"shard_{shard_n:05d}.npz",
                  ids=np.array(pending_ids, dtype=np.int64),
                  vecs=np.vstack(pending_vecs).astype(np.float32),
-                 colors=np.array(pending_cols, dtype=np.uint8))
+                 colors=np.array(pending_cols, dtype=np.uint8),
+                 dims=np.array(pending_dims, dtype=np.uint16))
         shard_n += 1
-        pending_ids, pending_vecs, pending_cols = [], [], []
+        pending_ids, pending_vecs, pending_cols, pending_dims = [], [], [], []
 
     headers = {"User-Agent": "ArtiFact/0.1 (personal project)"}
     with httpx.Client(headers=headers, follow_redirects=True) as session, \
@@ -210,7 +212,7 @@ def main() -> None:
                 lambda r: fetch(session, r["image_id"], args.iiif_width, cache),
                 batch))
 
-            images, ids, colors = [], [], []
+            images, ids, colors, dims = [], [], [], []
             for row, blob in zip(batch, blobs):
                 if blob is None:
                     failed += 1
@@ -222,6 +224,10 @@ def main() -> None:
                     continue
                 images.append(img)
                 colors.append(dominant_color(img, np))
+                # Aspect ratio, so the map can shape a tile correctly before
+                # any pixels of it have loaded. A hanging scroll is 1:3 and
+                # drawing it as a square is a lie about the object.
+                dims.append((min(img.width, 65535), min(img.height, 65535)))
                 ids.append(row["id"])
             if not images:
                 continue
@@ -236,6 +242,7 @@ def main() -> None:
             pending_ids.extend(ids)
             pending_vecs.append(vecs.cpu().numpy())
             pending_cols.extend(colors)
+            pending_dims.extend(dims)
 
             if len(pending_ids) >= args.shard_every:
                 flush()
@@ -248,26 +255,29 @@ def main() -> None:
         flush()
 
     # --- merge shards into the aligned pair D4 and D5 consume -------------
-    ids_all, vecs_all, cols_all = [], [], []
+    ids_all, vecs_all, cols_all, dims_all = [], [], [], []
     for shard in sorted(shard_dir.glob("shard_*.npz")):
         z = np.load(shard)
-        if "colors" not in z:
-            sys.exit(f"{shard.name} predates the colour pass; "
+        if "colors" not in z or "dims" not in z:
+            sys.exit(f"{shard.name} predates the colour/aspect pass; "
                      f"delete --out and re-run")
         ids_all.append(z["ids"])
         vecs_all.append(z["vecs"])
         cols_all.append(z["colors"])
+        dims_all.append(z["dims"])
     if not ids_all:
         sys.exit("no shards produced; nothing to merge")
 
     ids = np.concatenate(ids_all)
     vecs = np.vstack(vecs_all)
     cols = np.vstack(cols_all)
+    dims = np.vstack(dims_all)
     # Shards can overlap if a run was killed between write and exit.
     _, keep = np.unique(ids, return_index=True)
-    ids, vecs, cols = ids[keep], vecs[keep], cols[keep]
+    ids, vecs, cols, dims = ids[keep], vecs[keep], cols[keep], dims[keep]
 
     np.save(args.out / "colors.npy", cols)
+    np.save(args.out / "dims.npy", dims)
     np.save(args.out / "embeddings.npy", vecs)
     (args.out / "ids.json").write_text(json.dumps([int(i) for i in ids]))
     (args.out / "manifest.json").write_text(json.dumps({
@@ -282,6 +292,7 @@ def main() -> None:
         "normalized": True,
         "preprocessor": backend,
         "has_colors": True,
+        "has_dims": True,
         "color_sample_px": COLOR_SAMPLE,
     }, indent=2))
 
@@ -289,7 +300,8 @@ def main() -> None:
           f"{failed} images unfetchable")
     print(f"    {args.out/'embeddings.npy'}  "
           f"({vecs.nbytes/1e6:.1f} MB)")
-    print(f"    copy back embeddings.npy, colors.npy, ids.json, manifest.json")
+    print(f"    copy back embeddings.npy, colors.npy, dims.npy, "
+          f"ids.json, manifest.json")
     print(f"    the image cache at {cache} is scratch, delete it")
 
 

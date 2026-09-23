@@ -34,6 +34,8 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+from PIL import Image
+
 # Confined sizing (!w,h), not sizeByW. AIC's IIIF server refuses any
 # request that would upscale: "Requests for scales in excess of 100% are
 # not allowed", HTTP 403. Asking for a fixed width therefore fails for
@@ -46,17 +48,21 @@ SHEET_PX = 2048
 FETCH_WIDTH = 200          # plenty for a 32px tile, cheap if we must fetch
 
 
-def square(img, size: int):
-    """Centre-crop to a square, then resize.
+def square(img, size: int, background=(13, 13, 15)):
+    """Fit the whole work inside a square cell, centred, without cropping.
 
-    Cover rather than contain: a dense mosaic reads better when every tile
-    is full bleed, and at 32px the cropped edges of a painting carry as
-    much of its character as the composition does.
+    Contain rather than cover. A cover-crop keeps the mosaic perfectly
+    regular but cuts the edges off every non-square work, and this corpus
+    is full of hanging scrolls at 1:3 — drawing one as a square is a lie
+    about the object. The client knows each work's aspect ratio and draws
+    only the occupied part of the cell, so the padding never shows.
     """
     w, h = img.size
-    side = min(w, h)
-    left, top = (w - side) // 2, (h - side) // 2
-    return img.resize((size, size), 1, box=(left, top, left + side, top + side))
+    fit = size / max(w, h)
+    iw, ih = max(1, round(w * fit)), max(1, round(h * fit))
+    cell = Image.new("RGB", (size, size), background)
+    cell.paste(img.resize((iw, ih), 1), ((size - iw) // 2, (size - ih) // 2))
+    return cell
 
 
 def main() -> None:
@@ -72,8 +78,6 @@ def main() -> None:
     ap.add_argument("--quality", type=int, default=82)
     ap.add_argument("--workers", type=int, default=8)
     args = ap.parse_args()
-
-    from PIL import Image
 
     ids = json.loads(args.ids.read_text())
     grid = SHEET_PX // args.tile

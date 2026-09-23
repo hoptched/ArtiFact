@@ -50,9 +50,15 @@ def load(config: Config):
     colors = np.load(P / "colors.npy") if (P / "colors.npy").exists() else None
     if colors is None:
         print("  no colors.npy — re-run D3 to get the mosaic colours\n")
+    # Aspect ratio, so a tile is the right shape before any of its pixels
+    # have arrived. Without it every work is drawn square, which for a
+    # collection this full of hanging scrolls is simply wrong.
+    dims = np.load(P / "dims.npy") if (P / "dims.npy").exists() else None
+    if dims is None:
+        print("  no dims.npy — re-run D3; tiles will be square until then\n")
     corpus = {r["id"]: r for r in
               (json.loads(l) for l in (P / "corpus.jsonl").open())}
-    return vecs, ids, corpus, head, colors
+    return vecs, ids, corpus, head, colors, dims
 
 
 def top_k_neighbors(vecs: np.ndarray, k: int) -> np.ndarray:
@@ -79,7 +85,7 @@ def top_k_neighbors(vecs: np.ndarray, k: int) -> np.ndarray:
 def main() -> None:
     config = Config.load()
     config.paths.ensure()
-    vecs, ids, corpus, head, colors = load(config)
+    vecs, ids, corpus, head, colors, dims = load(config)
     model, labels = head["model"], head["labels"]
     print(f"{len(ids):,} vectors, {len(corpus):,} corpus rows, "
           f"{len(labels)} style labels\n")
@@ -148,6 +154,8 @@ def main() -> None:
             "xy": [round(float(xy[i][0]), 4), round(float(xy[i][1]), 4)],
             "type": r.get("artwork_type"),
             **({"k": "#%02x%02x%02x" % tuple(colors[i])} if colors is not None else {}),
+            **({"ar": round(float(dims[i][0]) / max(float(dims[i][1]), 1), 3)}
+               if dims is not None else {}),
         })
         neighbors[str(artwork_id)] = [int(ids[j]) for j in nn[i]]
         for b in r["period_bins"]:

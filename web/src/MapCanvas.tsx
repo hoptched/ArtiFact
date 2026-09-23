@@ -115,7 +115,6 @@ export function MapCanvas({
       const size = Math.max(1, radius * 2 * s);
       const useThumbs = size >= THUMB_MIN_PX && sheets.length > 0;
       const { tile, grid, per_sheet } = atlasMeta;
-      const half = size / 2;
       // Cull generously: one tile of slop stops edges popping in.
       const pad = size + 4;
 
@@ -130,17 +129,18 @@ export function MapCanvas({
         const py = (pos[i * 2 + 1] - vy) * s + cy;
         if (px < -pad || py < -pad || px > w + pad || py > h + pad) continue;
 
+        // Every tier draws the work's true shape. `size` is the box it has
+        // to fit inside, not the shape it takes: a 1:3 hanging scroll is a
+        // sliver, a wide landscape is a band.
+        const ar = works[i].ar ?? 1;
+        const tw = ar >= 1 ? size : size * ar;
+        const th = ar >= 1 ? size / ar : size;
+        const hw = tw / 2, hh = th / 2;
+
         if (wantReal) {
           const real = images.get(works[i].img, size);
           if (real) {
-            // Whole work, not a crop. The atlas tiles are cover-cropped to
-            // keep the mosaic regular at a distance, but once a work is
-            // big enough to look at, cutting the edges off a painting is
-            // the wrong trade.
-            const nw = real.naturalWidth, nh = real.naturalHeight;
-            const fit = size / Math.max(nw, nh);
-            const dw = nw * fit, dh = nh * fit;
-            ctx.drawImage(real, px - dw / 2, py - dh / 2, dw, dh);
+            ctx.drawImage(real, px - hw, py - hh, tw, th);
             continue;
           }
         }
@@ -148,22 +148,29 @@ export function MapCanvas({
         const sheetIndex = (i / per_sheet) | 0;
         const sheet = useThumbs ? sheets[sheetIndex] : undefined;
         if (sheet) {
+          // The atlas cell is square with the work letterboxed inside it,
+          // so read back only the occupied part. Drawing the whole cell
+          // would paint its padding over the neighbouring tiles.
           const within = i % per_sheet;
+          const iw = ar >= 1 ? tile : tile * ar;
+          const ih = ar >= 1 ? tile / ar : tile;
           ctx.drawImage(
             sheet,
-            (within % grid) * tile, ((within / grid) | 0) * tile, tile, tile,
-            px - half, py - half, size, size,
+            (within % grid) * tile + (tile - iw) / 2,
+            ((within / grid) | 0) * tile + (tile - ih) / 2,
+            iw, ih,
+            px - hw, py - hh, tw, th,
           );
         } else {
           ctx.fillStyle = works[i].k ?? "#3a3a3f";
-          ctx.fillRect(px - half, py - half, size, size);
+          ctx.fillRect(px - hw, py - hh, tw, th);
         }
       }
 
       if (selected !== null) {
         const px = (pos[selected * 2] - vx) * s + cx;
         const py = (pos[selected * 2 + 1] - vy) * s + cy;
-        const r = Math.max(half * 1.9, 9 * dpr);
+        const r = Math.max(size * 0.95, 9 * dpr);
         ctx.strokeStyle = "#f5c451";
         ctx.lineWidth = 2 * dpr;
         ctx.strokeRect(px - r, py - r, r * 2, r * 2);

@@ -15,6 +15,7 @@ export interface Work {
   xy: [number, number]; // UMAP position, similarity only
   type: string | null;
   k?: string;           // dominant colour
+  ar?: number;          // aspect ratio, width / height
 }
 
 export interface Region {
