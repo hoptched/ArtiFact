@@ -24,7 +24,116 @@ body {
   overflow: hidden;
 }
 
-.app { position: relative; height: 100%; }
+.app {
+  display: flex;
+  height: 100%;
+  position: relative;
+}
+
+/* Left rail: everything that steers the map lives here, so the map itself
+   is never overlapped by a control. */
+.sidebar {
+  flex: 0 0 15.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 20px 16px 16px 20px;
+  background: var(--panel);
+  overflow: hidden;
+}
+
+.sidebar header h1 {
+  margin: 0;
+  font-size: 1.55rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.sidebar header p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.sidebar h2 {
+  margin: 0 0 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+
+.switcher { display: flex; flex-wrap: wrap; gap: 4px; }
+.switcher button {
+  background: rgba(255, 255, 255, 0.05);
+  border: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.92rem;
+  padding: 5px 12px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+.switcher button:hover { color: var(--ink); background: rgba(255,255,255,0.1); }
+.switcher button.on { background: var(--accent); color: #1a1408; font-weight: 600; }
+
+.group .hint {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.5;
+  font-style: italic;
+}
+
+.regions {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;          /* so the list scrolls instead of the rail */
+  flex: 1 1 auto;
+}
+.regions ul {
+  list-style: none;
+  margin: 0;
+  padding: 0 6px 0 0;
+  overflow-y: auto;
+  min-height: 0;
+}
+.regions li + li { margin-top: 1px; }
+.regions ul button {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  background: none;
+  border: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.92rem;
+  text-align: left;
+  padding: 3px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.regions ul button:hover { background: rgba(255, 255, 255, 0.07); }
+.regions ul button em {
+  font-style: normal; color: var(--muted); font-size: 0.82rem;
+}
+
+.sidebar .reset {
+  background: rgba(255, 255, 255, 0.05);
+  border: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.86rem;
+  padding: 7px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+.sidebar .reset:hover { color: var(--ink); background: rgba(255,255,255,0.1); }
+
+.stage { position: relative; flex: 1 1 auto; min-width: 0; }
 
 .map {
   position: absolute;
@@ -41,58 +150,8 @@ body {
   display: grid;
   place-items: center;
   height: 100%;
+  width: 100%;
   color: var(--muted);
-}
-
-/* Chrome floats over the canvas; the map is the page. */
-.chrome {
-  position: absolute;
-  z-index: 2;
-  background: color-mix(in srgb, var(--panel) 82%, transparent);
-  backdrop-filter: blur(14px);
-  border-radius: 12px;
-  padding: 12px 14px;
-}
-
-header.chrome { top: 16px; left: 16px; max-width: 19rem; }
-header.chrome h1 {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-}
-header.chrome p { margin: 6px 0 0; color: var(--muted); font-size: 0.92rem; }
-header.chrome .hint {
-  margin-top: 10px;
-  font-size: 0.86rem;
-  line-height: 1.5;
-  font-style: italic;
-}
-
-.switcher {
-  bottom: 16px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  padding: 8px 10px;
-}
-.switcher button {
-  background: transparent;
-  border: 1px solid transparent;
-  color: var(--muted);
-  font: inherit;
-  font-size: 0.95rem;
-  padding: 5px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-}
-.switcher button:hover { color: var(--ink); }
-.switcher button.on {
-  background: var(--accent);
-  color: #1a1408;
-  font-weight: 600;
 }
 
 .detail {
@@ -171,7 +230,7 @@ dd { margin: 0; font-size: 0.97rem; }
 
 @media (max-width: 700px) {
   .detail { width: 100%; height: 62%; top: auto; bottom: 0; }
-  header.chrome { max-width: calc(100% - 32px); }
+  
 }
 
 /* Region jump list. The style map puts Fauvism a third of a map away from
@@ -226,6 +285,11 @@ dd { margin: 0; font-size: 0.97rem; }
 }
 .regions .reset:hover { color: var(--ink); background: rgba(255, 255, 255, 0.1); }
 
-@media (max-width: 700px) {
-  .regions { display: none; }
+@media (max-width: 820px) {
+  .app { flex-direction: column; }
+  .sidebar {
+    flex: 0 0 auto;
+    max-height: 42%;
+    padding: 14px 16px;
+  }
 }

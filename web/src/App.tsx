@@ -34,63 +34,68 @@ export default function App() {
 
   return (
     <div className="app">
-      <MapCanvas
-        bundle={bundle}
-        facet={facet}
-        selected={selected}
-        onSelect={setSelected}
-        focus={focus}
-      />
+      <aside className="sidebar">
+        <header>
+          <h1>ArtiFact</h1>
+          <p>
+            {bundle.works.length.toLocaleString()} public-domain works from
+            the Art Institute of Chicago, arranged by how they look.
+          </p>
+        </header>
 
-      <header className="chrome">
-        <h1>ArtiFact</h1>
-        <p>
-          {bundle.works.length.toLocaleString()} public-domain works from the
-          Art Institute of Chicago, arranged by how they look.
-        </p>
-        <p className="hint">
-          {facetNote[facet]}
-        </p>
-      </header>
-
-      <nav className="chrome switcher">
-        <span className="muted small">Group by</span>
-        {FACETS.map((f) => (
-          <button
-            key={f.key}
-            className={f.key === facet ? "on" : ""}
-            onClick={() => setFacet(f.key)}
-          >
-            {f.label}
-          </button>
-        ))}
-      </nav>
-
-      {regions.length > 0 && (
-        <nav className="chrome regions">
-          <span className="muted small">Jump to</span>
-          <ul>
-            {regions.map((r) => (
-              <li key={r.name}>
-                <button
-                  onClick={() =>
-                    setFocus({ x: r.c[0], y: r.c[1], r: r.r, key: Date.now() })
-                  }
-                >
-                  <span>{r.name}</span>
-                  <em>{r.n.toLocaleString()}</em>
-                </button>
-              </li>
+        <section className="group">
+          <h2>Group by</h2>
+          <div className="switcher">
+            {FACETS.map((f) => (
+              <button
+                key={f.key}
+                className={f.key === facet ? "on" : ""}
+                onClick={() => setFacet(f.key)}
+              >
+                {f.label}
+              </button>
             ))}
-          </ul>
-          <button
-            className="reset"
-            onClick={() => setFocus({ x: 0.5, y: 0.5, r: 0.5, key: Date.now() })}
-          >
-            Whole map
-          </button>
-        </nav>
-      )}
+          </div>
+          <p className="hint">{facetNote[facet]}</p>
+        </section>
+
+        {regions.length > 0 && (
+          <section className="regions">
+            <h2>Jump to</h2>
+            <ul>
+              {regions.map((r) => (
+                <li key={r.name}>
+                  <button
+                    onClick={() =>
+                      setFocus({ x: r.c[0], y: r.c[1], r: r.r, key: Date.now() })
+                    }
+                  >
+                    <span>{r.name}</span>
+                    <em>{r.n.toLocaleString()}</em>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        <button
+          className="reset"
+          onClick={() => setFocus({ x: 0.5, y: 0.5, r: 0.5, key: Date.now() })}
+        >
+          Whole map
+        </button>
+      </aside>
+
+      <div className="stage">
+        <MapCanvas
+          bundle={bundle}
+          facet={facet}
+          selected={selected}
+          onSelect={setSelected}
+          focus={focus}
+        />
+      </div>
 
       {selected !== null && (
         <Detail

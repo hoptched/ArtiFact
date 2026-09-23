@@ -336,17 +336,40 @@ export function MapCanvas({
     };
   };
 
-  const onWheel = (e: React.WheelEvent) => {
-    flyRef.current = null;
-    const before = toWorld(e.clientX, e.clientY);
-    const view = viewRef.current;
-    const next = view.scale * Math.exp(-e.deltaY * 0.0016);
-    const rect = canvasRef.current!.getBoundingClientRect();
-    view.scale = Math.min(Math.max(next, Math.min(rect.width, rect.height) * 0.5), 260000);
-    const after = toWorld(e.clientX, e.clientY);
-    view.x += before.x - after.x;
-    view.y += before.y - after.y;
-  };
+  // Wheel is bound natively rather than through React, because React
+  // attaches wheel listeners passively and a passive listener cannot call
+  // preventDefault. Without that call, ctrl+scroll and trackpad pinch fall
+  // through to the browser and resize the whole page — which fights the
+  // map's own zoom on the same gesture.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      flyRef.current = null;
+      const rect = canvas.getBoundingClientRect();
+      const view = viewRef.current;
+      const at = (cx: number, cy: number) => ({
+        x: (cx - rect.left - rect.width / 2) / view.scale + view.x,
+        y: (cy - rect.top - rect.height / 2) / view.scale + view.y,
+      });
+      const before = at(e.clientX, e.clientY);
+      // A pinch on a trackpad arrives as ctrl+wheel with small deltas, so
+      // it needs a stronger factor to feel like the same gesture.
+      const k = e.ctrlKey ? 0.012 : 0.0016;
+      const next = view.scale * Math.exp(-e.deltaY * k);
+      view.scale = Math.min(
+        Math.max(next, Math.min(rect.width, rect.height) * 0.5), 260000,
+      );
+      const after = at(e.clientX, e.clientY);
+      view.x += before.x - after.x;
+      view.y += before.y - after.y;
+    };
+
+    canvas.addEventListener("wheel", onWheel, { passive: false });
+    return () => canvas.removeEventListener("wheel", onWheel);
+  }, []);
 
   const onPointerDown = (e: React.PointerEvent) => {
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
@@ -388,7 +411,6 @@ export function MapCanvas({
     <canvas
       ref={canvasRef}
       className="map"
-      onWheel={onWheel}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
