@@ -43,7 +43,7 @@ Decided 2026-09-22: painting-like only. Prints are the tempting 24.6k, but AIC's
 | --- | --- | --- | --- | --- |
 | [AIC Open Access](https://www.artic.edu/open-access/public-api) | ~50k CC0 images | `style_title`, but see below | Yes | **Yes, CC0** |
 | [Met Open Access](https://github.com/metmuseum/openaccess) | ~492k objects | No | Yes | Yes, CC0 |
-| [WikiArt](https://huggingface.co/datasets/huggan/wikiart) | ~81k | **Yes, 27 styles** | Via artist only | Murky |
+| [WikiArt](https://huggingface.co/datasets/huggan/wikiart) | 81,444 | **Yes, 27 styles** | Via artist only | Murky |
 | [SemArt](https://github.com/noagarcia/SemArt) | 21k | School / timeframe | Excellent | No, research only |
 | [Web Gallery of Art](https://www.wga.hu/database/download/index.html) | ~48k | School / form / type | Excellent | No, redistribution barred |
 
@@ -52,6 +52,8 @@ Decided 2026-09-22: painting-like only. Prints are the tempting 24.6k, but AIC's
 ### Training labels: WikiArt
 
 Train the style head on WikiArt and never redistribute it, then apply it to the AIC corpus. That is what supplies the style dimension for images you are allowed to show.
+
+**WikiArt is 81,444 images, 33.7 GB across 72 parquet shards** (confirmed 2026-09-23 from the repo's own `dataset_infos.json`). Do not trust HuggingFace's datasets-server for this: `/size` and `/info` report 11,320 rows because the server converts only the first ~5 GB of a repo and flags the result `"partial": true`. 5.27 of 33.7 GB converted is 11.3k of 81.4k rows, which is exactly the ratio.
 
 ### Model: frozen CLIP encoder + small trained heads
 
