@@ -319,6 +319,31 @@ def pack_regions(centres: dict[str, np.ndarray], sizes: dict[str, int],
     return dict(zip(names, pos)), dict(zip(names, rad))
 
 
+# How much of a region's own spread defines its edge. Normalising by the
+# maximum lets a single atypical work set the scale for everyone: India
+# has a couple of extreme outliers, and dividing by them crushed its other
+# 96 works into 9% of the region's radius, where every other country sits
+# at 54-82%. Relaxation then had to shove them apart, and the region came
+# out looking scattered and nearly empty. A high percentile is robust to
+# that; anything beyond it is pulled back to the rim.
+EXTENT_PERCENTILE = 92
+
+
+def _fit_unit(local: np.ndarray) -> np.ndarray:
+    """Scale a region's offsets so most sit inside the unit circle, with
+    outliers clamped to its edge rather than deciding its size."""
+    radius = np.linalg.norm(local, axis=1)
+    scale = float(np.percentile(radius, EXTENT_PERCENTILE))
+    if scale <= 0:
+        scale = float(radius.max()) or 1.0
+    local = local / scale
+    over = np.linalg.norm(local, axis=1)
+    beyond = over > 1.0
+    if beyond.any():
+        local[beyond] /= over[beyond][:, None]
+    return local
+
+
 def place(xy_local: np.ndarray, labels: list[str],
           centres: dict[str, np.ndarray], radii: dict[str, float],
           tangents: dict[str, np.ndarray] | None = None,
@@ -333,9 +358,7 @@ def place(xy_local: np.ndarray, labels: list[str],
     for name, centre in centres.items():
         mask = arr == name
         local = xy_local[mask] - xy_local[mask].mean(axis=0)
-        extent = np.abs(local).max()
-        if extent > 0:
-            local = local / extent
+        local = _fit_unit(local)
 
         if tangents is None or along_key is None:
             out[mask] = centre + local * radii[name] * 0.92
