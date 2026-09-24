@@ -1,9 +1,17 @@
 :root {
-  --bg: #0d0d0f;
-  --panel: #16161a;
+  --bg: #0d0d0f;          /* the map stays near-black, so art reads */
+  --panel: #16161a;       /* detail panel, also dark for the same reason */
+  /* The rail is a tool bar, not a canvas: mid grey, with buttons that sit
+     slightly proud of it. */
+  --bar: #3b3b3d;
+  --bar-edge: #2b2b2d;
+  --btn: #4a4a4d;
+  --btn-hover: #545457;
+  --btn-line: #5c5c60;
+  --btn-top: rgba(255, 255, 255, 0.09);
   --line: #2a2a31;
   --ink: #ece9e4;
-  --muted: #9a958d;
+  --muted: #a6a29b;
   --accent: #f5c451;
   /* The wordmark only. Swap this line for a licensed Orpheus. */
   --font-display: "Cormorant Garamond", "Orpheus Pro", Georgia, serif;
@@ -36,8 +44,9 @@ body {
   display: flex;
   flex-direction: column;
   gap: 18px;
-  padding: 20px 16px 16px 20px;
-  background: var(--panel);
+  padding: 16px 14px 14px 16px;
+  background: var(--bar);
+  border-right: 1px solid var(--bar-edge);
   overflow: hidden;
 }
 
@@ -58,27 +67,42 @@ body {
 }
 
 .sidebar h2 {
-  margin: 0 0 8px;
-  font-size: 0.68rem;
+  margin: 0 0 7px;
+  font-size: 0.66rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.12em;
   color: var(--muted);
 }
 
-.switcher { display: flex; flex-wrap: wrap; gap: 4px; }
-.switcher button {
-  background: rgba(255, 255, 255, 0.05);
-  border: none;
-  color: var(--muted);
+.switcher { display: flex; flex-wrap: wrap; gap: 5px; }
+
+/* Buttons sit slightly proud of the bar: a lighter face, a hairline edge,
+   and a single highlighted pixel along the top. */
+.switcher button,
+.sidebar .reset {
+  background: var(--btn);
+  border: 1px solid var(--btn-line);
+  box-shadow: inset 0 1px 0 var(--btn-top);
+  color: var(--ink);
   font: inherit;
-  font-size: 0.82rem;
-  padding: 5px 12px;
-  border-radius: 7px;
+  font-size: 0.8rem;
+  padding: 4px 11px;
+  border-radius: 4px;
   cursor: pointer;
+  line-height: 1.5;
 }
-.switcher button:hover { color: var(--ink); background: rgba(255,255,255,0.1); }
-.switcher button.on { background: var(--accent); color: #1a1408; font-weight: 600; }
+.switcher button:hover,
+.sidebar .reset:hover { background: var(--btn-hover); }
+
+/* Pressed, not coloured: the bar has no accent of its own. */
+.switcher button.on {
+  background: #2f2f31;
+  border-color: #262628;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-weight: 600;
+}
 
 .group .hint {
   margin: 10px 0 0;
@@ -135,7 +159,7 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.regions ul button:hover { background: rgba(255, 255, 255, 0.07); }
+.regions ul button:hover { background: rgba(255, 255, 255, 0.09); }
 .regions ul button em {
   font-style: normal;
   color: var(--muted);
@@ -144,17 +168,7 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-.sidebar .reset {
-  background: rgba(255, 255, 255, 0.05);
-  border: none;
-  color: var(--muted);
-  font: inherit;
-  font-size: 0.78rem;
-  padding: 7px;
-  border-radius: 7px;
-  cursor: pointer;
-}
-.sidebar .reset:hover { color: var(--ink); background: rgba(255,255,255,0.1); }
+.sidebar .reset { text-align: center; padding: 6px; }
 
 .stage { position: relative; flex: 1 1 auto; min-width: 0; }
 
