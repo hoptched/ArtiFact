@@ -105,7 +105,6 @@ export default function App() {
         <Compare
           bundle={bundle}
           facet={facet}
-          onSelect={setSelected}
           onFocus={flyTo}
           onPin={(p) => { setPin(p); setShowOwn(p !== null); }}
           onOpen={() => setShowOwn(true)}

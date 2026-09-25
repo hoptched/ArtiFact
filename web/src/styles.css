@@ -369,16 +369,15 @@ dd { margin: 0; font-size: 0.85rem; }
   .detail .similar { grid-template-columns: repeat(8, 1fr); }
 }
 
-/* Compare-your-own. Sits under the region list; the list gives up height
-   for it, since a picture you brought is more interesting than a jump
-   target you can still scroll to. */
+/* Compare-your-own. Just the drop zone and a one-line verdict now; the
+   results have a panel of their own on the right. */
 .compare { flex: 0 0 auto; }
 .compare .drop {
   width: 100%;
-  min-height: 4.5rem;
+  min-height: 4rem;
   display: grid;
   place-items: center;
-  padding: 10px;
+  padding: 8px;
   background: var(--btn);
   border: 1px dashed var(--btn-line);
   border-radius: 4px;
@@ -390,37 +389,25 @@ dd { margin: 0; font-size: 0.85rem; }
 }
 .compare .drop:hover:not(:disabled) { background: var(--btn-hover); }
 .compare .drop:disabled { cursor: progress; }
-.compare .drop img {
-  max-width: 100%;
-  max-height: 7rem;
-  display: block;
+.compare .drop img { max-width: 100%; max-height: 5.5rem; display: block; }
+.compare .verdict {
+  margin: 7px 0 0;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
 }
-.compare .verdict { margin: 8px 0 6px; font-size: 0.82rem; }
 .compare .verdict b { color: var(--accent); font-weight: 600; }
-.compare .matches {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 3px;
-}
-.compare .matches button {
-  padding: 0; border: 1px solid var(--line); background: none;
-  overflow: hidden; cursor: pointer; aspect-ratio: 1;
-}
-.compare .matches button:hover { border-color: var(--accent); }
-.compare .matches img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.compare .small { margin: 6px 0 0; }
-
-.compare .reopen {
-  width: 100%;
-  margin: 8px 0 8px;
-  background: var(--btn);
-  border: 1px solid var(--btn-line);
-  box-shadow: inset 0 1px 0 var(--btn-top);
-  color: var(--ink);
+.compare .link {
+  margin-left: auto;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--muted);
   font: inherit;
-  font-size: 0.78rem;
-  padding: 5px;
-  border-radius: 4px;
+  font-size: 0.76rem;
+  text-decoration: underline;
   cursor: pointer;
 }
-.compare .reopen:hover { background: var(--btn-hover); }
+.compare .link:hover { color: var(--ink); }
+.compare .small { margin: 6px 0 0; }
