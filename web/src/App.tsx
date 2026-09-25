@@ -2,6 +2,7 @@ import { useState } from "react";
 import { MapCanvas } from "./MapCanvas";
 import type { Focus } from "./MapCanvas";
 import { Detail } from "./Detail";
+import { Compare } from "./Compare";
 import { useBundle } from "./useData";
 import type { Facet } from "./types";
 
@@ -79,6 +80,13 @@ export default function App() {
             </ul>
           </section>
         )}
+
+        <Compare
+          bundle={bundle}
+          facet={facet}
+          onSelect={setSelected}
+          onFocus={(x, y) => setFocus({ x, y, r: 0.06, key: Date.now() })}
+        />
 
         <button
           className="reset"

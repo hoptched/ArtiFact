@@ -368,3 +368,44 @@ dd { margin: 0; font-size: 0.85rem; }
   .note-foot { display: none; }
   .detail .similar { grid-template-columns: repeat(8, 1fr); }
 }
+
+/* Compare-your-own. Sits under the region list; the list gives up height
+   for it, since a picture you brought is more interesting than a jump
+   target you can still scroll to. */
+.compare { flex: 0 0 auto; }
+.compare .drop {
+  width: 100%;
+  min-height: 4.5rem;
+  display: grid;
+  place-items: center;
+  padding: 10px;
+  background: var(--btn);
+  border: 1px dashed var(--btn-line);
+  border-radius: 4px;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.76rem;
+  text-align: center;
+  cursor: pointer;
+}
+.compare .drop:hover:not(:disabled) { background: var(--btn-hover); }
+.compare .drop:disabled { cursor: progress; }
+.compare .drop img {
+  max-width: 100%;
+  max-height: 7rem;
+  display: block;
+}
+.compare .verdict { margin: 8px 0 6px; font-size: 0.82rem; }
+.compare .verdict b { color: var(--accent); font-weight: 600; }
+.compare .matches {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+}
+.compare .matches button {
+  padding: 0; border: 1px solid var(--line); background: none;
+  overflow: hidden; cursor: pointer; aspect-ratio: 1;
+}
+.compare .matches button:hover { border-color: var(--accent); }
+.compare .matches img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.compare .small { margin: 6px 0 0; }
