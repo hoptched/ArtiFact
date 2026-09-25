@@ -42,7 +42,8 @@ export class Comparer {
     labels: string[]; coef: number[][]; intercept: number[];
     fingerprint: string;
   } | null = null;
-  private extractor: unknown = null;
+  private model: unknown = null;
+  private processor: unknown = null;
   private loading: Promise<void> | null = null;
 
   /** Fetch the model and the corpus vectors. Safe to call repeatedly. */
@@ -52,7 +53,7 @@ export class Comparer {
   }
 
   get ready() {
-    return this.meta !== null && this.vectors !== null && this.extractor !== null;
+    return this.meta !== null && this.vectors !== null && this.model !== null;
   }
 
   private async doLoad(onProgress?: (what: string) => void) {
@@ -73,16 +74,23 @@ export class Comparer {
     }
 
     onProgress?.("Loading the image model (~53 MB, once)…");
-    const { pipeline } = await import("@huggingface/transformers");
-    this.extractor = await pipeline(
-      "image-feature-extraction",
-      "Xenova/clip-vit-base-patch32",
-      // q4f16 is 53 MB against 352 MB for the full weights. Measured on 24
-      // corpus images it ranked each one first against itself and returned
-      // about 70% of its true top-20 — plenty for "this looks like that",
-      // and the quantization of the corpus vectors is not the weak link.
-      { dtype: "q4f16", device: "wasm" },
-    );
+    const { AutoProcessor, CLIPVisionModelWithProjection } =
+      await import("@huggingface/transformers");
+    // The same class the pipeline used, not the generic feature-extraction
+    // pipeline: CLIP's vision export has no pooler, so asking that pipeline
+    // to pool fails outright. This one emits image_embeds straight from the
+    // projection head — the exact quantity the corpus vectors are.
+    //
+    // q4f16 is 53 MB against 352 MB for the full weights. Measured on 24
+    // corpus images it ranked each one first against itself and returned
+    // about 70% of its true top-20.
+    const repo = "Xenova/clip-vit-base-patch32";
+    [this.processor, this.model] = await Promise.all([
+      AutoProcessor.from_pretrained(repo),
+      CLIPVisionModelWithProjection.from_pretrained(repo, {
+        dtype: "q4f16", device: "wasm",
+      }),
+    ]);
     onProgress?.("");
   }
 
@@ -91,9 +99,13 @@ export class Comparer {
     await this.load();
     const { RawImage } = await import("@huggingface/transformers");
     const raw = await RawImage.fromBlob(image);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const out = await (this.extractor as any)(raw, { pool: true, normalize: true });
-    const q = Float32Array.from(out.data as Float32Array);
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    const inputs = await (this.processor as any)(raw);
+    const out = await (this.model as any)(inputs);
+    /* eslint-enable @typescript-eslint/no-explicit-any */
+    const embeds = out.image_embeds ?? out.last_hidden_state;
+    if (!embeds) throw new Error("the model returned no image_embeds");
+    const q = Float32Array.from(embeds.data as Float32Array);
 
     let qn = 0;
     for (const v of q) qn += v * v;
