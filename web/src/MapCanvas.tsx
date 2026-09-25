@@ -18,14 +18,20 @@ const easeInOut = (t: number) =>
 
 export interface Focus { x: number; y: number; r: number; key: number }
 
+export interface MapPin {
+  img: HTMLImageElement;
+  matches: { index: number; similarity: number }[];
+}
+
 export function MapCanvas({
-  bundle, facet, selected, onSelect, focus,
+  bundle, facet, selected, onSelect, focus, pin,
 }: {
   bundle: Bundle;
   facet: Facet;
   selected: number | null;
   onSelect: (index: number | null) => void;
   focus: Focus | null;
+  pin: MapPin | null;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const viewRef = useRef<View>({ x: 0.5, y: 0.5, scale: 0 });
@@ -276,6 +282,56 @@ export function MapCanvas({
 
       if (hiAtlas && hiWanted.size) hiAtlas.pump(hiWanted);
 
+      // The uploaded picture, sitting among the works it resembles. Its
+      // position is read from the live animated coordinates rather than
+      // the target layout, so when the grouping changes it travels with
+      // its neighbours instead of jumping when they arrive.
+      if (pin && pin.matches.length) {
+        let px = 0, py = 0, total = 0;
+        for (const m of pin.matches.slice(0, 8)) {
+          const w = Math.max(m.similarity, 0) ** 8;
+          px += pos[m.index * 2] * w;
+          py += pos[m.index * 2 + 1] * w;
+          total += w;
+        }
+        if (total > 0) {
+          const x = (px / total - vx) * s + cx;
+          const y = (py / total - vy) * s + cy;
+          const im = pin.img;
+          const box = Math.max(size * 3.2, 52 * dpr);
+          const ar2 = im.naturalWidth / Math.max(im.naturalHeight, 1) || 1;
+          const pw = ar2 >= 1 ? box : box * ar2;
+          const ph = ar2 >= 1 ? box / ar2 : box;
+
+          const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 420);
+          ctx.save();
+          ctx.shadowColor = "rgba(245,196,81,0.9)";
+          ctx.shadowBlur = (10 + 10 * pulse) * dpr;
+          ctx.fillStyle = "#0d0d0f";
+          ctx.fillRect(x - pw / 2 - 3 * dpr, y - ph / 2 - 3 * dpr,
+                       pw + 6 * dpr, ph + 6 * dpr);
+          ctx.restore();
+
+          if (im.complete && im.naturalWidth) {
+            ctx.drawImage(im, x - pw / 2, y - ph / 2, pw, ph);
+          }
+          ctx.strokeStyle = "#f5c451";
+          ctx.lineWidth = 2 * dpr;
+          ctx.strokeRect(x - pw / 2 - 3 * dpr, y - ph / 2 - 3 * dpr,
+                         pw + 6 * dpr, ph + 6 * dpr);
+
+          const label = "yours";
+          ctx.font = `600 ${11 * dpr}px ui-sans-serif, system-ui, sans-serif`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "bottom";
+          ctx.lineWidth = 4 * dpr;
+          ctx.strokeStyle = "rgba(6,6,8,0.9)";
+          ctx.strokeText(label, x, y - ph / 2 - 8 * dpr);
+          ctx.fillStyle = "#f5c451";
+          ctx.fillText(label, x, y - ph / 2 - 8 * dpr);
+        }
+      }
+
       if (selected !== null) {
         const px = (pos[selected * 2] - vx) * s + cx;
         const py = (pos[selected * 2 + 1] - vy) * s + cy;
@@ -307,7 +363,7 @@ export function MapCanvas({
     frame = requestAnimationFrame(draw);
     return () => { cancelAnimationFrame(frame); ro.disconnect(); };
   }, [works, layouts, facet, atlasMeta, sheets, radius, selected, fit, ready,
-      images, hires, hiAtlas, focus]);
+      images, hires, hiAtlas, focus, pin]);
 
   useEffect(() => {
     if (!focus) return;

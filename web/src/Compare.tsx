@@ -7,13 +7,16 @@ import type { Facet } from "./types";
 
 const comparer = new Comparer();
 
+export interface Pin { url: string; matches: CompareResult["matches"] }
+
 export function Compare({
-  bundle, facet, onSelect, onFocus,
+  bundle, facet, onSelect, onFocus, onPin,
 }: {
   bundle: Bundle;
   facet: Facet;
   onSelect: (index: number) => void;
   onFocus: (x: number, y: number) => void;
+  onPin: (pin: Pin | null) => void;
 }) {
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
@@ -26,12 +29,15 @@ export function Compare({
     setError(null);
     setBusy(true);
     setResult(null);
-    setPreview((old) => { if (old) URL.revokeObjectURL(old); return URL.createObjectURL(file); });
+    const url = URL.createObjectURL(file);
+    setPreview((old) => { if (old) URL.revokeObjectURL(old); return url; });
+    onPin(null);
     try {
       await comparer.load(setStatus);
       setStatus("Looking…");
       const res = await comparer.compare(file);
       setResult(res);
+      onPin({ url, matches: res.matches });
       const xy = bundle.layouts.facets[facet].xy;
       const at = placeAmong(res.matches, xy, bundle.works);
       if (at) onFocus(at[0], at[1]);
@@ -42,7 +48,7 @@ export function Compare({
     } finally {
       setBusy(false);
     }
-  }, [bundle, facet, onFocus]);
+  }, [bundle, facet, onFocus, onPin]);
 
   return (
     <section className="compare">

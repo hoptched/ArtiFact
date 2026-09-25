@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { MapCanvas } from "./MapCanvas";
-import type { Focus } from "./MapCanvas";
+import type { Focus, MapPin } from "./MapCanvas";
+import type { Pin } from "./Compare";
 import { Detail } from "./Detail";
 import { Compare } from "./Compare";
 import { useBundle } from "./useData";
@@ -29,10 +30,26 @@ export default function App() {
   const [facet, setFacet] = useState<Facet>("similarity");
   const [selected, setSelected] = useState<number | null>(null);
   const [focus, setFocus] = useState<Focus | null>(null);
+  const [pin, setPin] = useState<Pin | null>(null);
+  const [mapPin, setMapPin] = useState<MapPin | null>(null);
   const regions = bundle?.layouts.facets[facet].regions ?? [];
 
+  const flyTo = useCallback(
+    (x: number, y: number) => setFocus({ x, y, r: 0.06, key: Date.now() }), []);
+
+  // The map draws a decoded image, so hold the pin back until it has
+  // loaded rather than flashing an empty frame where the picture goes.
+  useEffect(() => {
+    if (!pin) { setMapPin(null); return; }
+    let live = true;
+    const img = new Image();
+    img.onload = () => { if (live) setMapPin({ img, matches: pin.matches }); };
+    img.src = pin.url;
+    return () => { live = false; };
+  }, [pin]);
+
   if (error) return <div className="status">Could not load the map: {error}</div>;
-  if (!bundle) return <div className="status">Loading 9,101 works…</div>;
+  if (!bundle) return <div className="status">Loading 9,130 works…</div>;
 
   return (
     <div className="app">
@@ -85,7 +102,8 @@ export default function App() {
           bundle={bundle}
           facet={facet}
           onSelect={setSelected}
-          onFocus={(x, y) => setFocus({ x, y, r: 0.06, key: Date.now() })}
+          onFocus={flyTo}
+          onPin={setPin}
         />
 
         <button
@@ -103,6 +121,7 @@ export default function App() {
           selected={selected}
           onSelect={setSelected}
           focus={focus}
+          pin={mapPin}
         />
       </div>
 
