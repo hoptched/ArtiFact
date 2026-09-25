@@ -68,8 +68,14 @@ _group("Realism", "Realism", "American Realism", "Analytical Realism",
 _group("Naturalism", "Naturalism", "Costumbrismo")
 _group("Orientalism", "Orientalism")
 _group("Impressionism", "Impressionism", "Intimism")
-_group("Post-Impressionism", "Post-Impressionism", "Cloisonnism", "Synthetism")
-_group("Pointillism", "Pointillism", "Divisionism")
+# Pointillism and Divisionism fold in. Split out, Pointillism had 839
+# training works against Impressionism's 10,752, and balanced weighting
+# rewarded it for guessing at broken colour: the independent AIC test sent
+# 11 of 56 Post-Impressionist works to it, and a late Monet came back
+# "Pointillism 0.82". The 17-class taxonomy merged them and I separated
+# them in D8 without evidence they should be apart. This is that bill.
+_group("Post-Impressionism", "Post-Impressionism", "Cloisonnism",
+       "Synthetism", "Pointillism", "Divisionism")
 _group("Symbolism", "Symbolism")
 _group("Art Nouveau", "Art Nouveau (Modern)", "Modernismo", "Japonism")
 
