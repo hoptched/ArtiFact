@@ -25,6 +25,8 @@ class CorpusConfig:
     max_span_years: int
     painting_like_only: bool
     painting_like_types: list[str]
+    print_cap_per_artist: int
+    print_dedupe_title: bool
 
 
 @dataclass(frozen=True)

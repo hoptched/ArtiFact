@@ -20,14 +20,50 @@ from __future__ import annotations
 import argparse
 import json
 import random
+import re
 from collections import Counter
 from typing import Any
 
 from pipeline.config import Config
+from pipeline.taxonomy_v2 import STYLE_LABELS
 from pipeline.taxonomy import (
-    PLACE_TO_COUNTRY, STYLE_LABELS, UNKNOWN_PLACES, VAGUE_PLACES,
+    PLACE_TO_COUNTRY, UNKNOWN_PLACES, VAGUE_PLACES,
     country_for, date_precision, period_bin, period_bins, period_label,
 )
+
+
+def thin_prints(rows: list[dict], cap: int, dedupe: bool,
+                seed: int = 0) -> list[dict]:
+    """Keep one impression per design and cap how many any artist brings.
+
+    Printmaking is reproductive: a design exists in many impressions and
+    states, and AIC catalogues each separately. Left alone the corpus
+    becomes its most prolific printmakers — 1,529 Hiroshige, 1,032
+    Whistler — and the map turns into a portrait of two men.
+
+    The cap is uniform. Thinning only the Japanese material, which is what
+    the skew looks like at first glance, would have left Whistler
+    untouched and called the result balanced.
+    """
+    if dedupe:
+        seen, kept = set(), []
+        for r in rows:
+            key = (re.split(r"[,(/]", r.get("title") or "")[0].strip().lower(),
+                   r.get("artist_title"))
+            if key in seen:
+                continue
+            seen.add(key)
+            kept.append(r)
+        rows = kept
+
+    by_artist: dict[str, list[dict]] = {}
+    for r in rows:
+        by_artist.setdefault(r.get("artist_title") or "?", []).append(r)
+    rng = random.Random(seed)
+    out: list[dict] = []
+    for works in by_artist.values():
+        out.extend(works if len(works) <= cap else rng.sample(works, cap))
+    return out
 
 
 def unmapped_places(raw_places: Counter[str]) -> list[str]:
@@ -100,6 +136,7 @@ def main() -> None:
 
     seen = kept = 0
     dropped_type = dropped_date = 0
+    prints: list[dict] = []
     raw_places: Counter[str] = Counter()
     countries: Counter[str] = Counter()
     periods: Counter[int] = Counter()
@@ -118,6 +155,13 @@ def main() -> None:
                 dropped_type += 1
                 continue
 
+            # Prints are held back and thinned as a group, since the rule
+            # is about how many an artist brings rather than about any
+            # individual work.
+            if record.get("artwork_type_title") == "Print":
+                prints.append(record)
+                continue
+
             raw_places[record.get("place_of_origin")] += 1
             row = normalize(record, config)
             if row is None:
@@ -132,6 +176,24 @@ def main() -> None:
             kept += 1
             if kept >= config.corpus.max_works:
                 break
+
+    before = len(prints)
+    prints = thin_prints(prints, config.corpus.print_cap_per_artist,
+                         config.corpus.print_dedupe_title)
+    print(f"  prints: {before:,} -> {len(prints):,} after thinning "
+          f"(one per design, {config.corpus.print_cap_per_artist} per artist)")
+    for record in prints:
+        raw_places[record.get("place_of_origin")] += 1
+        row = normalize(record, config)
+        if row is None:
+            dropped_date += 1
+            continue
+        rows.append(row)
+        countries[row["country"]] += 1
+        for b in row["period_bins"]:
+            periods[b] += 1
+        precisions[row["date_precision"]] += 1
+        kept += 1
 
     with out_path.open("w") as fh:
         for row in rows:
@@ -162,8 +224,7 @@ def main() -> None:
     print(f"  country  {labelled:>6,}  {100*labelled/kept:5.1f}%   "
           f"({len(countries)} values, "
           f"{countries[config.taxonomy.unknown_label]} unknown)")
-    print(f"  style         0    0.0%   (D4 fills this; "
-          f"{len(STYLE_LABELS)} labels defined)")
+    print(f"  style         0    0.0%   (filled by the head in D5)")
     print(f"\n  unmapped place values: {len(missing)}"
           + (f" -> {missing}" if missing else " (lookup is complete)"))
 

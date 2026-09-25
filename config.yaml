@@ -17,6 +17,20 @@ corpus:
     - Painting
     - Drawing and Watercolor
     - Miniature Painting
+    - Print
+  # Prints joined the corpus once the taxonomy could name them. D2
+  # excluded them because the 17-class set was European oils and would
+  # have called every woodblock "Ukiyo-e"; the 42-class set has Ukiyo-e at
+  # 0.819, Japanese prints at 0.573 and Ink and wash at 0.812, three of
+  # its strongest classes.
+  #
+  # Thinned, because printmaking is reproductive: one impression per
+  # design, and no artist over the cap. AIC holds 1,529 Hiroshige prints
+  # and 1,032 Whistlers, and without this the map becomes those two men.
+  # The rule is uniform — capping only the Japanese material would have
+  # left Whistler alone and called it balance.
+  print_cap_per_artist: 150
+  print_dedupe_title: true
 
 model:
   # ViT-L/14 over ViT-B/32, measured on 20,224 works of Artificio/WikiArt

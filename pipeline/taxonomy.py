@@ -91,7 +91,7 @@ PLACE_TO_COUNTRY: dict[str, str] = {
     # France
     "France": "France", "Paris": "France", "Lyon": "France",
     "Brittany": "France", "Giverny": "France", "Trouville": "France",
-    "Saint-Rémy-de-Provence": "France",
+    "Saint-Rémy-de-Provence": "France", "Fontainebleau": "France",
     # Italy
     "Italy": "Italy", "Venice": "Italy", "Florence": "Italy",
     "Northern Italy": "Italy", "Rome": "Italy", "Genoa": "Italy",
@@ -102,15 +102,18 @@ PLACE_TO_COUNTRY: dict[str, str] = {
     "England": "United Kingdom", "United Kingdom": "United Kingdom",
     "Scotland": "United Kingdom", "Great Britain": "United Kingdom",
     "London": "United Kingdom", "Wales": "United Kingdom",
+    "Twickenham": "United Kingdom",
     "Ireland": "Ireland",
     # Low Countries, split as modern states
     "Holland": "Netherlands", "Netherlands": "Netherlands",
     "Northern Netherlands": "Netherlands", "Dordrecht": "Netherlands",
     "Delft": "Netherlands",
     "Flanders": "Belgium", "Belgium": "Belgium", "Bruges": "Belgium",
+    "Flemish Brabant": "Belgium", "Hainaut province": "Belgium",
     # German-speaking
     "Germany": "Germany", "Munich": "Germany", "Berlin": "Germany",
     "Southern Germany": "Germany", "Bavaria": "Germany", "Rhine": "Germany",
+    "Frankfurt an der Oder": "Germany",
     "Austria": "Austria", "Switzerland": "Switzerland",
     # United States
     "United States": "United States", "Philadelphia": "United States",
@@ -153,7 +156,8 @@ PLACE_TO_COUNTRY: dict[str, str] = {
     "Bukhara": "Uzbekistan", "Turkey": "Turkey",
     # Africa, Oceania, Americas
     "Egypt": "Egypt", "Ethiopia": "Ethiopia", "Australia": "Australia",
-    "Teotihuacán": "Mexico", "Peruvian North Coast": "Peru",
+    "Teotihuacán": "Mexico", "Mexico": "Mexico",
+    "Peruvian North Coast": "Peru", "Poland": "Poland",
 }
 
 # Real values that name something larger than a country. Kept distinct from
