@@ -1,4 +1,3 @@
-import type { Work } from "./types";
 
 export interface CompareMeta {
   count: number;
@@ -152,21 +151,51 @@ export class Comparer {
   }
 }
 
-/** Where to draw the uploaded image on a given layout: with its neighbours. */
+/** How many matches decide where the picture belongs. */
+export const ANCHOR_K = 12;
+
+/**
+ * Where to draw the uploaded picture on a given layout.
+ *
+ * Not the centroid of its neighbours. For the Mona Lisa the twelve nearest
+ * works split Italy 5, France 4, Belgium 2, Spain 1 — all Raphael-ish head
+ * studies, scattered by the museum's attribution of where they were made —
+ * and their weighted centroid lands inside Belgium, a region holding two of
+ * the twelve. Averaging positions across separate clusters gives a point
+ * belonging to none of them, and the similarities here run 0.91 to 0.93, so
+ * no weighting rescues it.
+ *
+ * Instead: take the region most of the neighbours agree on, and average only
+ * the ones that are in it. The map then says what the panel says, because
+ * both are reading the same consensus.
+ */
 export function placeAmong(
-  matches: Match[], xy: [number, number][], works: Work[],
+  matches: Match[],
+  pos: (index: number) => [number, number] | null,
+  regionOf: string[] | null,
 ): [number, number] | null {
-  // Similarity-weighted centroid of the closest matches. The map has no way
-  // to project a new point through UMAP, but sitting among the works it
-  // most resembles is what the position would have meant anyway.
-  const use = matches.slice(0, 8).filter((m) => works[m.index]);
+  const use = matches.slice(0, ANCHOR_K).filter((m) => pos(m.index));
   if (!use.length) return null;
+
+  let chosen = use;
+  if (regionOf) {
+    const tally = new Map<string, number>();
+    for (const m of use) {
+      const r = regionOf[m.index];
+      if (r) tally.set(r, (tally.get(r) ?? 0) + 1);
+    }
+    const top = [...tally].sort((a, b) => b[1] - a[1])[0];
+    if (top) {
+      const inRegion = use.filter((m) => regionOf[m.index] === top[0]);
+      if (inRegion.length) chosen = inRegion;
+    }
+  }
+
   let wx = 0, wy = 0, total = 0;
-  for (const m of use) {
-    const w = Math.max(m.similarity, 0) ** 8;   // sharpen toward the best few
-    wx += xy[m.index][0] * w;
-    wy += xy[m.index][1] * w;
-    total += w;
+  for (const m of chosen) {
+    const p = pos(m.index)!;
+    const w = Math.max(m.similarity, 0) ** 8;
+    wx += p[0] * w; wy += p[1] * w; total += w;
   }
   return total > 0 ? [wx / total, wy / total] : null;
 }

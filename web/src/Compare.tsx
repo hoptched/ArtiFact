@@ -37,8 +37,12 @@ export function Compare({
       const res = await comparer.compare(file);
       setResult(res);
       onPin({ url, result: res });
-      const xy = bundle.layouts.facets[facet].xy;
-      const at = placeAmong(res.matches, xy, bundle.works);
+      const layout = bundle.layouts.facets[facet];
+      const at = placeAmong(
+        res.matches,
+        (i) => (layout.xy[i] ?? null),
+        layout.region_of?.length ? layout.region_of : null,
+      );
       if (at) onFocus(at[0], at[1]);
       setStatus("");
     } catch (e) {

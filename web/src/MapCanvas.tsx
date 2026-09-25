@@ -3,6 +3,7 @@ import type { Bundle } from "./useData";
 import type { Facet } from "./types";
 import { ImageCache, TIER2_MIN_PX } from "./imageCache";
 import { HiResAtlas } from "./hiresAtlas";
+import { placeAmong } from "./compare";
 
 interface View { x: number; y: number; scale: number }
 
@@ -292,16 +293,19 @@ export function MapCanvas({
       // the target layout, so when the grouping changes it travels with
       // its neighbours instead of jumping when they arrive.
       if (pin && pin.matches.length) {
-        let px = 0, py = 0, total = 0;
-        for (const m of pin.matches.slice(0, 8)) {
-          const w = Math.max(m.similarity, 0) ** 8;
-          px += pos[m.index * 2] * w;
-          py += pos[m.index * 2 + 1] * w;
-          total += w;
-        }
-        if (total > 0) {
-          const x = (px / total - vx) * s + cx;
-          const y = (py / total - vy) * s + cy;
+        // Same rule the panel uses: the region most of the neighbours
+        // agree on, averaged over only the ones in it. Read from the live
+        // animated coordinates, so it travels with them.
+        const regionOf = layouts.facets[facet].region_of;
+        const at = placeAmong(
+          pin.matches,
+          (i) => (i * 2 + 1 < pos.length
+            ? [pos[i * 2], pos[i * 2 + 1]] as [number, number] : null),
+          regionOf && regionOf.length ? regionOf : null,
+        );
+        if (at) {
+          const x = (at[0] - vx) * s + cx;
+          const y = (at[1] - vy) * s + cy;
           const im = pin.img;
           const box = Math.max(size * 3.2, 52 * dpr);
           const ar2 = im.naturalWidth / Math.max(im.naturalHeight, 1) || 1;
@@ -326,15 +330,14 @@ export function MapCanvas({
           ctx.strokeRect(x - pw / 2 - 3 * dpr, y - ph / 2 - 3 * dpr,
                          pw + 6 * dpr, ph + 6 * dpr);
 
-          const label = "yours";
           ctx.font = `600 ${11 * dpr}px ui-sans-serif, system-ui, sans-serif`;
           ctx.textAlign = "center";
           ctx.textBaseline = "bottom";
           ctx.lineWidth = 4 * dpr;
           ctx.strokeStyle = "rgba(6,6,8,0.9)";
-          ctx.strokeText(label, x, y - ph / 2 - 8 * dpr);
+          ctx.strokeText("yours", x, y - ph / 2 - 8 * dpr);
           ctx.fillStyle = "#f5c451";
-          ctx.fillText(label, x, y - ph / 2 - 8 * dpr);
+          ctx.fillText("yours", x, y - ph / 2 - 8 * dpr);
         }
       }
 
