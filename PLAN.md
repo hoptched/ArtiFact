@@ -204,6 +204,26 @@ Needs one new stage, D5b, to build the atlases: re-fetch at 32px, pack in layout
 
 **D6 minimum views**: a grid filtered on period x region x style with a confidence toggle; a detail page with the large IIIF image, all metadata, the predicted style clearly marked as predicted, and a visually-similar row from the KNN; and one of timeline or map, not both.
 
+## D8: a bigger backbone and finer labels
+
+Measured 2026-09-25, not assumed. 20,224 works of Artificio/WikiArt, 28 styles with at least 120 examples, artists held out of the test fold:
+
+| Backbone | dim | Accuracy | Macro F1 | In the browser |
+| --- | --- | --- | --- | --- |
+| ViT-B/32 (what D3-D5 used) | 512 | 0.464 | 0.429 | 53 MB |
+| ViT-B/16 | 512 | 0.484 | 0.455 | 87 MB |
+| **ViT-L/14** | 768 | **0.540** | **0.520** | 173 MB |
+
++7.6 accuracy and +9.1 macro F1, on a harder problem than the 17-class one D4 solved: L/14 over 28 classes matches what B/32 managed over 17. The backbone was the only lever that paid.
+
+**The head stays linear.** An MLP scored +1.3 accuracy for -0.6 macro F1 — buying the common classes with the rare ones, which is what balanced weighting exists to prevent — and took seven times as long to fit. Concatenating B/32 onto L/14 came out *below* L/14 alone, so a second backbone adds noise rather than a second opinion.
+
+**Training data moves to [Artificio/WikiArt](https://huggingface.co/datasets/Artificio/WikiArt).** 103,250 works against huggan's 81,444, **137 style labels against 27**, in 1.7 GB against 33.7 because its images ship pre-resized to 256px. That resizing was checked before anything depended on it: the existing head, trained on full-resolution images, scores 51% top-1 and 88% top-3 on the 256px ones against 54% on its own test. No meaningful domain shift.
+
+What the finer labels buy is coverage, not accuracy. Surrealism (4,167), Neoclassicism (2,038), Art Deco, Regionalism, Futurism, Shin-hanga and Precisionism (284) all become sayable. An O'Keeffe came back "Cubism 0.42" not because Cubism was short of data — it has 2,561 training works and the second-best F1 in the set — but because the taxonomy stopped at 1910 and softmax must answer.
+
+The dataset also carries `date` and a 43-value `genre` field, which is a fourth map facet for free.
+
 ## Open questions
 
 Compute and corpus scope are settled. Nothing here blocks D2.

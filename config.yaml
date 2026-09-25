@@ -19,10 +19,18 @@ corpus:
     - Miniature Painting
 
 model:
-  backbone: openai/clip-vit-base-patch32
+  # ViT-L/14 over ViT-B/32, measured on 20,224 works of Artificio/WikiArt
+  # across 28 styles with artists held out:
+  #   B/32   0.464 acc  0.429 macro F1    53 MB in the browser
+  #   B/16   0.484      0.455             87 MB
+  #   L/14   0.540      0.520            173 MB
+  # A linear head stays: an MLP bought +1.3 accuracy for -0.6 macro F1,
+  # which is buying the big classes with the small ones, and concatenating
+  # B/32 onto L/14 was worse than L/14 alone.
+  backbone: openai/clip-vit-large-patch14
   image_size: 224            # the backbone's native input
   batch_size: 64
-  embed_dim: 512
+  embed_dim: 768
 
 taxonomy:
   # Decided 2026-09-22 over named_eras: ~10% of the corpus is Chinese,
