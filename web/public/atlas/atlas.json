@@ -4,7 +4,9 @@
   "grid": 32,
   "per_sheet": 1024,
   "sheets": 9,
-  "count": 9130,
+  "count": 9131,
   "missing": 0,
-  "note": "tile index == position in ids.json; sheet = i // per_sheet, col = i % grid, row = (i % per_sheet) // grid"
+  "prefix": "atlas",
+  "ordered": false,
+  "note": "tile index == position in the pack order; sheet = i // per_sheet, col = i % grid, row = (i % per_sheet) // grid"
 }
