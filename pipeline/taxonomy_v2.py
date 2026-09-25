@@ -50,17 +50,26 @@ _group("Mannerism", "Mannerism (Late Renaissance)")
 _group("Baroque", "Baroque", "Tenebrism", "Neo-baroque")
 _group("Rococo", "Rococo", "Neo-Rococo")
 _group("Neoclassicism", "Neoclassicism", "Classicism")
-_group("Academicism", "Academicism", "Verism")
-_group("Romanticism", "Romanticism", "Neo-Romanticism", "Biedermeier")
+# Academicism folds into Romanticism. Trained apart, the model sent 1,079
+# Romanticism works to Academicism and scored 0.214 and 0.376 on the two —
+# it cannot separate salon painting from the Romantic mainstream, and art
+# history draws the line by institution rather than by appearance.
+_group("Romanticism", "Romanticism", "Neo-Romanticism", "Biedermeier",
+       "Academicism", "Verism")
 
 # --- the nineteenth century -----------------------------------------------
-_group("Realism", "Realism", "American Realism", "Analytical Realism")
+# Tonalism and Luminism fold in. Kept apart they became a sink: 587 works
+# scoring 0.185 while pulling in 923 Realism and 981 Romanticism
+# predictions, because balanced weighting rewards a small class for
+# guessing and "muted tonal landscape" is not a style so much as a mood
+# several styles pass through.
+_group("Realism", "Realism", "American Realism", "Analytical Realism",
+       "Tonalism", "Luminism")
 _group("Naturalism", "Naturalism", "Costumbrismo")
 _group("Orientalism", "Orientalism")
 _group("Impressionism", "Impressionism", "Intimism")
 _group("Post-Impressionism", "Post-Impressionism", "Cloisonnism", "Synthetism")
 _group("Pointillism", "Pointillism", "Divisionism")
-_group("Tonalism", "Tonalism", "Luminism")
 _group("Symbolism", "Symbolism")
 _group("Art Nouveau", "Art Nouveau (Modern)", "Modernismo", "Japonism")
 
@@ -89,7 +98,10 @@ _group("Art Deco", "Art Deco")
 _group("Dada", "Dada", "Neo-Dada", "Mail Art", "Lettrism")
 _group("Surrealism", "Surrealism", "Metaphysical art", "Automatic Painting",
        "Fantastic Realism", "Transautomatism")
-_group("Magic Realism", "Magic Realism")
+# Magic Realism is dropped, not merged. 1,002 works — ample — and it still
+# scored 0.097, because it is a category of subject and intent rather than
+# of appearance: a Magic Realist painting looks like whatever its painter's
+# realism looks like. No amount of data teaches a classifier to see it.
 _group("Naive art", "Naïve Art (Primitivism)", "Art Brut", "Outsider art",
        "Primitivism", "Native Art", "Kitsch")
 

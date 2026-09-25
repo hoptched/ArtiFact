@@ -57,7 +57,7 @@ def evaluate(X, y, train_idx, test_idx):
     from sklearn.linear_model import LogisticRegression
     from sklearn.metrics import confusion_matrix
 
-    clf = LogisticRegression(max_iter=3000, class_weight="balanced")
+    clf = LogisticRegression(max_iter=1200, class_weight="balanced")
     clf.fit(X[train_idx], y[train_idx])
     pred = clf.predict(X[test_idx])
     return confusion_matrix(y[test_idx], pred,
@@ -127,7 +127,7 @@ def main() -> None:
     for n, i, j in flat:
         print(f"    {n:>5}  {STYLE_LABELS[i]} -> {STYLE_LABELS[j]}")
 
-    final = LogisticRegression(max_iter=3000, class_weight="balanced")
+    final = LogisticRegression(max_iter=1200, class_weight="balanced")
     final.fit(X, y)
     out = config.paths.processed
     joblib.dump({"model": final, "labels": STYLE_LABELS,
