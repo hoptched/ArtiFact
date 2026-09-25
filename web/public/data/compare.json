@@ -1,9 +1,9 @@
 {
-  "count": 9130,
-  "dim": 512,
-  "scale": 0.7689302563667297,
-  "fingerprint": "5aaf317b7b80",
-  "backbone": "openai/clip-vit-base-patch32",
+  "count": 9131,
+  "dim": 768,
+  "scale": 0.5293722748756409,
+  "fingerprint": "def748919118",
+  "backbone": "openai/clip-vit-large-patch14",
   "image_size": 224,
   "encoder_note": "quantized in-browser encoder; ~70% top-20 fidelity"
 }

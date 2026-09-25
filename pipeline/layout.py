@@ -22,6 +22,8 @@ from __future__ import annotations
 
 import numpy as np
 
+from pipeline.taxonomy import OUTSIDE_TAXONOMY
+
 # A region holding fewer than this is a speck on the map; 23 of the 35
 # countries are below it, together holding 292 works.
 MIN_REGION = 50
@@ -111,7 +113,22 @@ def facet_values(works: list[dict], facet: str) -> list[str]:
                            else label_of[last])
         return out
     if facet == "style":
-        return [w["s"] or "Outside the taxonomy" for w in works]
+        # The 43-class head predicts 21 styles fewer than 50 times each on
+        # this corpus — 213 works between them, nearly all postwar labels
+        # turning up once or twice on a collection that stops at 1900.
+        # A region of one work is a speck with a label, so they share one.
+        #
+        # Only the region is grouped. Each work keeps its own predicted
+        # style in the bundle, so the detail panel still says Precisionism
+        # even though the map does not draw a Precisionism region.
+        counts: dict[str, int] = {}
+        for w in works:
+            s = w["s"] or OUTSIDE_TAXONOMY
+            counts[s] = counts.get(s, 0) + 1
+        thin = {s for s, n in counts.items()
+                if n < MIN_REGION and s != OUTSIDE_TAXONOMY}
+        return [("Other styles" if (w["s"] or OUTSIDE_TAXONOMY) in thin
+                 else (w["s"] or OUTSIDE_TAXONOMY)) for w in works]
     if facet == "country":
         counts: dict[str, int] = {}
         for w in works:

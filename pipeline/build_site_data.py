@@ -135,7 +135,7 @@ def main() -> None:
         # The taxonomy is 16 European movements plus Ukiyo-e. Outside that
         # domain the head is confidently wrong rather than uncertain, so
         # the label is withheld instead of shown with a caveat.
-        in_domain = style_applies(r["country"])
+        in_domain = style_applies(r["country"], config.taxonomy.unknown_label)
         style = labels[best[i]] if in_domain else None
         if not in_domain:
             suppressed += 1

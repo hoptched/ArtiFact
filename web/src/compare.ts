@@ -72,7 +72,7 @@ export class Comparer {
       throw new Error("style head and corpus vectors disagree");
     }
 
-    onProgress?.("Loading the image model (~53 MB, once)…");
+    onProgress?.("Loading the image model (~173 MB, once)…");
     const { AutoProcessor, CLIPVisionModelWithProjection } =
       await import("@huggingface/transformers");
     // The same class the pipeline used, not the generic feature-extraction
@@ -80,10 +80,11 @@ export class Comparer {
     // to pool fails outright. This one emits image_embeds straight from the
     // projection head — the exact quantity the corpus vectors are.
     //
-    // q4f16 is 53 MB against 352 MB for the full weights. Measured on 24
-    // corpus images it ranked each one first against itself and returned
-    // about 70% of its true top-20.
-    const repo = "Xenova/clip-vit-base-patch32";
+    // q4f16 is 173 MB against 1.2 GB for the full weights.
+    // Must be the backbone the corpus was encoded with, or the vectors
+    // do not share a space. ViT-L/14 scored 0.540 against B/32's 0.464 on
+    // identical works with artists held out, which is worth 173 MB here.
+    const repo = "Xenova/clip-vit-large-patch14";
     [this.processor, this.model] = await Promise.all([
       AutoProcessor.from_pretrained(repo),
       CLIPVisionModelWithProjection.from_pretrained(repo, {

@@ -58,7 +58,7 @@
     {
       "bin": 1400,
       "label": "1400–1449",
-      "count": 85
+      "count": 86
     },
     {
       "bin": 1450,
@@ -127,7 +127,7 @@
     },
     {
       "name": "Italy",
-      "count": 1953
+      "count": 1954
     },
     {
       "name": "United States",
@@ -260,96 +260,226 @@
   ],
   "styles": [
     {
+      "name": "Neoclassicism",
+      "count": 1753
+    },
+    {
       "name": "Baroque",
-      "count": 2046
-    },
-    {
-      "name": "Romanticism",
-      "count": 1163
-    },
-    {
-      "name": "Rococo",
-      "count": 976
-    },
-    {
-      "name": "Realism",
-      "count": 706
-    },
-    {
-      "name": "Art Nouveau",
-      "count": 687
-    },
-    {
-      "name": "Northern Renaissance",
-      "count": 588
-    },
-    {
-      "name": "High Renaissance",
-      "count": 586
-    },
-    {
-      "name": "Outside the taxonomy",
-      "count": 387
-    },
-    {
-      "name": "Naive Art",
-      "count": 365
-    },
-    {
-      "name": "Early Renaissance",
-      "count": 351
-    },
-    {
-      "name": "Post-Impressionism",
-      "count": 264
+      "count": 1204
     },
     {
       "name": "Mannerism",
-      "count": 243
+      "count": 797
     },
     {
-      "name": "Ukiyo-e",
-      "count": 211
+      "name": "Romanticism",
+      "count": 780
+    },
+    {
+      "name": "Rococo",
+      "count": 672
+    },
+    {
+      "name": "Realism",
+      "count": 639
+    },
+    {
+      "name": "Art Nouveau",
+      "count": 505
+    },
+    {
+      "name": "High Renaissance",
+      "count": 372
+    },
+    {
+      "name": "Northern Renaissance",
+      "count": 325
+    },
+    {
+      "name": "Ink and wash",
+      "count": 291
     },
     {
       "name": "Symbolism",
-      "count": 181
+      "count": 268
     },
     {
       "name": "Impressionism",
-      "count": 169
+      "count": 229
+    },
+    {
+      "name": "Outside the taxonomy",
+      "count": 151
+    },
+    {
+      "name": "Orientalism",
+      "count": 133
+    },
+    {
+      "name": "Medieval",
+      "count": 132
+    },
+    {
+      "name": "Naturalism",
+      "count": 119
+    },
+    {
+      "name": "Naive art",
+      "count": 114
+    },
+    {
+      "name": "Post-Impressionism",
+      "count": 84
+    },
+    {
+      "name": "Persian & Ottoman",
+      "count": 83
     },
     {
       "name": "Expressionism",
-      "count": 169
+      "count": 74
     },
     {
-      "name": "Cubism",
+      "name": "Early Renaissance",
+      "count": 70
+    },
+    {
+      "name": "Ukiyo-e",
+      "count": 64
+    },
+    {
+      "name": "Dada",
+      "count": 59
+    },
+    {
+      "name": "Photorealism",
+      "count": 38
+    },
+    {
+      "name": "Japanese prints, modern",
+      "count": 25
+    },
+    {
+      "name": "Social Realism",
+      "count": 25
+    },
+    {
+      "name": "Minimalism",
+      "count": 25
+    },
+    {
+      "name": "Pointillism",
       "count": 24
     },
     {
-      "name": "Fauvism",
+      "name": "Proto Renaissance",
       "count": 14
+    },
+    {
+      "name": "Regionalism",
+      "count": 8
+    },
+    {
+      "name": "Geometric abstraction",
+      "count": 8
+    },
+    {
+      "name": "Fauvism",
+      "count": 7
+    },
+    {
+      "name": "Op Art",
+      "count": 6
+    },
+    {
+      "name": "Art Deco",
+      "count": 5
+    },
+    {
+      "name": "Surrealism",
+      "count": 5
+    },
+    {
+      "name": "Colour Field",
+      "count": 4
+    },
+    {
+      "name": "Pop Art",
+      "count": 4
+    },
+    {
+      "name": "Abstract art",
+      "count": 3
+    },
+    {
+      "name": "Cubism",
+      "count": 3
+    },
+    {
+      "name": "Neo-Expressionism",
+      "count": 2
+    },
+    {
+      "name": "Futurism",
+      "count": 2
+    },
+    {
+      "name": "Lyrical Abstraction",
+      "count": 2
+    },
+    {
+      "name": "Abstract Expressionism",
+      "count": 2
+    },
+    {
+      "name": "Precisionism",
+      "count": 1
     }
   ],
   "outside_taxonomy_label": "Outside the taxonomy",
   "style_domain_note": "Style is predicted only for works from traditions the 17-label taxonomy covers: European painting and Japanese ukiyo-e. Elsewhere it is withheld, because the model is confidently wrong rather than uncertain.",
   "style_labels": [
+    "Abstract Expressionism",
+    "Abstract art",
+    "Art Deco",
     "Art Nouveau",
     "Baroque",
+    "Colour Field",
     "Cubism",
+    "Dada",
     "Early Renaissance",
     "Expressionism",
     "Fauvism",
+    "Futurism",
+    "Geometric abstraction",
     "High Renaissance",
     "Impressionism",
+    "Ink and wash",
+    "Japanese prints, modern",
+    "Lyrical Abstraction",
     "Mannerism",
-    "Naive Art",
+    "Medieval",
+    "Minimalism",
+    "Naive art",
+    "Naturalism",
+    "Neo-Expressionism",
+    "Neoclassicism",
     "Northern Renaissance",
+    "Op Art",
+    "Orientalism",
+    "Persian & Ottoman",
+    "Photorealism",
+    "Pointillism",
+    "Pop Art",
     "Post-Impressionism",
+    "Precisionism",
+    "Proto Renaissance",
     "Realism",
+    "Regionalism",
     "Rococo",
     "Romanticism",
+    "Social Realism",
+    "Surrealism",
     "Symbolism",
     "Ukiyo-e"
   ],
@@ -360,7 +490,7 @@
   ],
   "iiif": "https://www.artic.edu/iiif/2/{image_id}/full/!{width},{width}/0/default.jpg",
   "counts": {
-    "works": 9130,
+    "works": 9131,
     "neighbors_per_work": 20
   }
 }

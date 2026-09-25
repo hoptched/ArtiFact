@@ -218,38 +218,35 @@ STYLE_LABELS: list[str] = sorted(set(WIKIART_STYLE_MAP.values()))
 
 
 # --- Where the style taxonomy applies -------------------------------------
-# The 17 labels are 16 European movements plus Ukiyo-e. They describe
-# Western painting c.1400-1900 and, for Ukiyo-e, the Japanese woodblock
-# tradition. They describe nothing else.
+# D8 changed this. The 17-class set covered European painting and Japanese
+# ukiyo-e and nothing else, so every Chinese scroll and Persian page was
+# predicted "Ukiyo-e" at high confidence and the honest response was to
+# withhold style for the whole non-Western corpus.
 #
-# Measured on the AIC corpus 2026-09-23: Chinese works were predicted
-# Ukiyo-e 161 times out of 193, Tibetan thangkas 12 of 19, at a mean
-# confidence of 0.73. Ukiyo-e is simply the only non-European class
-# available, so everything East Asian falls into it. A confidence
-# threshold cannot catch this — the model is confidently wrong, not
-# uncertain — so the domain has to be declared rather than inferred.
+# The 43-class set genuinely covers those traditions, and they are among
+# the strongest classes it has: Persian & Ottoman 0.871, Ukiyo-e 0.819,
+# Ink and wash 0.812, Japanese prints 0.573. Withholding style there now
+# would be hiding the model's best work.
 #
-# Japan is deliberately in: 144 of 162 Japanese works were predicted
-# Ukiyo-e at 0.814 confidence, which is correct.
-STYLE_DOMAIN_COUNTRIES: frozenset[str] = frozenset({
-    # Western Europe and its settler traditions
-    "France", "Italy", "United Kingdom", "Ireland", "Netherlands", "Belgium",
-    "Germany", "Austria", "Switzerland", "Spain", "Greece",
-    "Sweden", "Denmark", "Norway", "Finland", "Hungary", "Czech Republic",
-    "Russia", "United States", "Australia",
-    "Europe (unspecified)",
-    # The one non-European tradition the taxonomy actually covers
-    "Japan",
+# What remains uncovered is the Indian subcontinent and the Himalaya.
+# WikiArt has no class for Ragamala or Mughal painting or for a Tibetan
+# thangka, so the head has nothing right to say about them, and 33 of the
+# top 46 predictions for India in the old model were Ukiyo-e — the same
+# failure as before, just narrower.
+STYLE_DOMAIN_EXCLUDES: frozenset[str] = frozenset({
+    "India", "Pakistan", "Afghanistan", "Nepal", "Tibet", "Mongolia",
+    "Egypt", "Ethiopia", "Mexico", "Peru",
+    "Middle East (unspecified)",
 })
 
 OUTSIDE_TAXONOMY = "Outside the taxonomy"
 
 
-def style_applies(country: str) -> bool:
+def style_applies(country: str, unknown_label: str = "Unknown") -> bool:
     """Whether a style prediction for this work can mean anything.
 
-    A country the taxonomy does not cover gets no style rather than a
+    A tradition the taxonomy does not cover gets no style rather than a
     confident falsehood. Period and country are observed facts and remain
     browsable either way.
     """
-    return country in STYLE_DOMAIN_COUNTRIES
+    return country not in STYLE_DOMAIN_EXCLUDES and country != unknown_label
