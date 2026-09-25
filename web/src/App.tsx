@@ -4,6 +4,7 @@ import type { Focus, MapPin } from "./MapCanvas";
 import type { Pin } from "./Compare";
 import { Detail } from "./Detail";
 import { Compare } from "./Compare";
+import { OwnDetail } from "./OwnDetail";
 import { useBundle } from "./useData";
 import type { Facet } from "./types";
 
@@ -32,6 +33,7 @@ export default function App() {
   const [focus, setFocus] = useState<Focus | null>(null);
   const [pin, setPin] = useState<Pin | null>(null);
   const [mapPin, setMapPin] = useState<MapPin | null>(null);
+  const [showOwn, setShowOwn] = useState(false);
   const regions = bundle?.layouts.facets[facet].regions ?? [];
 
   const flyTo = useCallback(
@@ -43,7 +45,9 @@ export default function App() {
     if (!pin) { setMapPin(null); return; }
     let live = true;
     const img = new Image();
-    img.onload = () => { if (live) setMapPin({ img, matches: pin.matches }); };
+    img.onload = () => {
+      if (live) setMapPin({ img, matches: pin.result.matches });
+    };
     img.src = pin.url;
     return () => { live = false; };
   }, [pin]);
@@ -103,7 +107,8 @@ export default function App() {
           facet={facet}
           onSelect={setSelected}
           onFocus={flyTo}
-          onPin={setPin}
+          onPin={(p) => { setPin(p); setShowOwn(p !== null); }}
+          onOpen={() => setShowOwn(true)}
         />
 
         <button
@@ -122,10 +127,21 @@ export default function App() {
           onSelect={setSelected}
           focus={focus}
           pin={mapPin}
+          onOpenPin={() => setShowOwn(true)}
         />
       </div>
 
-      {selected !== null && (
+      {showOwn && pin && (
+        <OwnDetail
+          bundle={bundle}
+          url={pin.url}
+          result={pin.result}
+          onSelect={(i) => { setShowOwn(false); setSelected(i); }}
+          onClose={() => setShowOwn(false)}
+        />
+      )}
+
+      {selected !== null && !showOwn && (
         <Detail
           bundle={bundle}
           index={selected}

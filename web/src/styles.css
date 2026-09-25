@@ -409,3 +409,18 @@ dd { margin: 0; font-size: 0.85rem; }
 .compare .matches button:hover { border-color: var(--accent); }
 .compare .matches img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .compare .small { margin: 6px 0 0; }
+
+.compare .reopen {
+  width: 100%;
+  margin: 8px 0 8px;
+  background: var(--btn);
+  border: 1px solid var(--btn-line);
+  box-shadow: inset 0 1px 0 var(--btn-top);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.78rem;
+  padding: 5px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.compare .reopen:hover { background: var(--btn-hover); }

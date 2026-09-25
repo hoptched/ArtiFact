@@ -24,7 +24,7 @@ export interface MapPin {
 }
 
 export function MapCanvas({
-  bundle, facet, selected, onSelect, focus, pin,
+  bundle, facet, selected, onSelect, focus, pin, onOpenPin,
 }: {
   bundle: Bundle;
   facet: Facet;
@@ -32,6 +32,7 @@ export function MapCanvas({
   onSelect: (index: number | null) => void;
   focus: Focus | null;
   pin: MapPin | null;
+  onOpenPin: () => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const viewRef = useRef<View>({ x: 0.5, y: 0.5, scale: 0 });
@@ -44,6 +45,10 @@ export function MapCanvas({
   const toRef = useRef<Float32Array>(new Float32Array(0));
   const animRef = useRef<{ start: number } | null>(null);
   const dragRef = useRef<{ x: number; y: number; moved: boolean } | null>(null);
+  // Screen rectangle of the uploaded picture, written each frame so a
+  // click can be tested against it before the nearest-work search.
+  const pinRectRef = useRef<
+    { x: number; y: number; w: number; h: number } | null>(null);
   const flyRef = useRef<
     { from: View; to: View; start: number; ms: number } | null>(null);
 
@@ -303,6 +308,7 @@ export function MapCanvas({
           const pw = ar2 >= 1 ? box : box * ar2;
           const ph = ar2 >= 1 ? box / ar2 : box;
 
+          pinRectRef.current = { x, y, w: pw + 6 * dpr, h: ph + 6 * dpr };
           const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 420);
           ctx.save();
           ctx.shadowColor = "rgba(245,196,81,0.9)";
@@ -331,6 +337,8 @@ export function MapCanvas({
           ctx.fillText(label, x, y - ph / 2 - 8 * dpr);
         }
       }
+
+      if (!pin) pinRectRef.current = null;
 
       if (selected !== null) {
         const px = (pos[selected * 2] - vx) * s + cx;
@@ -448,6 +456,23 @@ export function MapCanvas({
     const drag = dragRef.current;
     dragRef.current = null;
     if (!drag || drag.moved) return;
+
+    // The uploaded picture is drawn over the map and is larger than a
+    // tile, so it gets first refusal on a click.
+    const rect = pinRectRef.current;
+    if (rect) {
+      const canvas = canvasRef.current!;
+      const box = canvas.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const px = (e.clientX - box.left) * dpr;
+      const py = (e.clientY - box.top) * dpr;
+      if (Math.abs(px - rect.x) <= rect.w / 2
+          && Math.abs(py - rect.y) <= rect.h / 2) {
+        onOpenPin();
+        return;
+      }
+    }
+
     const world = toWorld(e.clientX, e.clientY);
     const pos = posRef.current;
     // Nearest work within a few tile-widths, so a click near a gap does

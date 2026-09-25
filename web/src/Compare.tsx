@@ -7,16 +7,17 @@ import type { Facet } from "./types";
 
 const comparer = new Comparer();
 
-export interface Pin { url: string; matches: CompareResult["matches"] }
+export interface Pin { url: string; result: CompareResult }
 
 export function Compare({
-  bundle, facet, onSelect, onFocus, onPin,
+  bundle, facet, onSelect, onFocus, onPin, onOpen,
 }: {
   bundle: Bundle;
   facet: Facet;
   onSelect: (index: number) => void;
   onFocus: (x: number, y: number) => void;
   onPin: (pin: Pin | null) => void;
+  onOpen: () => void;
 }) {
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
@@ -37,7 +38,7 @@ export function Compare({
       setStatus("Looking…");
       const res = await comparer.compare(file);
       setResult(res);
-      onPin({ url, matches: res.matches });
+      onPin({ url, result: res });
       const xy = bundle.layouts.facets[facet].xy;
       const at = placeAmong(res.matches, xy, bundle.works);
       if (at) onFocus(at[0], at[1]);
@@ -57,7 +58,7 @@ export function Compare({
       <button
         className="drop"
         disabled={busy}
-        onClick={() => inputRef.current?.click()}
+        onClick={() => (result ? onOpen() : inputRef.current?.click())}
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => {
           e.preventDefault();
@@ -85,6 +86,7 @@ export function Compare({
 
       {result && (
         <>
+          <button className="reopen" onClick={onOpen}>See the full comparison</button>
           {result.style && (
             <p className="verdict">
               Closest style: <b>{result.style.label}</b>{" "}
