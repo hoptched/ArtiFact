@@ -89,13 +89,14 @@ def main() -> None:
     print(f"dim         {dim}\n")
 
     vecs: list[np.ndarray] = []
+    flushes = 0
     meta_path = args.out / "meta.jsonl"
     meta = meta_path.open("w")
     seen = kept = 0
     started = time.time()
 
     def flush(images, rows):
-        nonlocal kept
+        nonlocal kept, flushes
         if not images:
             return
         inputs = processor(images=images, return_tensors="pt")
@@ -106,12 +107,24 @@ def main() -> None:
         vecs.append(v.cpu().numpy().astype(np.float32))
         for r in rows:
             meta.write(json.dumps(r, ensure_ascii=False) + "\n")
+        meta.flush()
         kept += len(rows)
+        flushes += 1
+        # Count batches, not works. Keying the report off `kept % N == 0`
+        # meant that once a shard ended on a partial batch, `kept` stopped
+        # landing on the multiple and the run went silent for the rest of
+        # its life — indistinguishable from a hang.
+        if flushes % 8 == 0:
+            rate = kept / max(time.time() - started, 1e-6)
+            print(f"  {kept:>7,} encoded  {rate:6.1f} img/s", flush=True)
 
     for name in SHARDS:
         if args.limit and kept >= args.limit:
             break
+        # Downloading a 426 MB shard prints nothing on its own, so say so.
+        print(f"  fetching {name.split('/')[-1]} ...", flush=True)
         path = Path(hf_hub_download(REPO, name, repo_type="dataset"))
+        print(f"  encoding {name.split('/')[-1]}", flush=True)
         images, rows = [], []
         for batch in pq.ParquetFile(path).iter_batches(batch_size=256,
                                                        columns=COLUMNS):
@@ -133,9 +146,6 @@ def main() -> None:
                 if len(images) >= args.batch_size:
                     flush(images, rows)
                     images, rows = [], []
-                    rate = kept / max(time.time() - started, 1e-6)
-                    if kept % (args.batch_size * 8) == 0:
-                        print(f"  {kept:>7,} encoded  {rate:6.1f} img/s")
                     if args.limit and kept >= args.limit:
                         break
             if args.limit and kept >= args.limit:
