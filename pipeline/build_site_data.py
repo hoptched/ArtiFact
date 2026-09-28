@@ -225,6 +225,10 @@ def main() -> None:
             "region_of": labels,
             # Per facet: a ribbon carries a different tile size than a disc.
             "work_radius": round(float(tile), 6),
+            # Century boundaries, for the timeline to rule itself against.
+            "grid": (layout.timeline_grid(
+                        pos, np.array([w["my"] for w in works]))
+                     if facet in layout.ARC_FACETS else []),
         }
         drawn = sum(1 for n in sizes if n in centres)
         print(f"  layout {facet:<10} {drawn:>3} regions"

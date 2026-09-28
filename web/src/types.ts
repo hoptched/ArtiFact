@@ -35,6 +35,8 @@ export interface Layouts {
     xy: [number, number][];
     /** Tile radius this facet can carry; a ribbon differs from a disc. */
     work_radius?: number;
+    /** Century boundaries along a timeline facet. */
+    grid?: { x: number; label: string }[];
     regions: Region[];
     region_of: string[];
   }>;

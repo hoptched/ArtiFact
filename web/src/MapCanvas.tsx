@@ -207,6 +207,31 @@ export function MapCanvas({
       ctx.fillStyle = "#0d0d0f";
       ctx.fillRect(0, 0, w, h);
 
+      // Century rules, behind everything. Recessive: they are a scale to
+      // read against, not a thing to look at.
+      const rules = layouts.facets[facet].grid;
+      if (rules && rules.length) {
+        const top = (0 - vy) * s + cy;
+        const bottom = (1 - vy) * s + cy;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        for (const line of rules) {
+          const gx = (line.x - vx) * s + cx;
+          if (gx < -80 || gx > w + 80) continue;
+          ctx.strokeStyle = "rgba(255,255,255,0.09)";
+          ctx.lineWidth = 1 * dpr;
+          ctx.beginPath();
+          ctx.moveTo(gx, Math.max(top, 0));
+          ctx.lineTo(gx, Math.min(bottom, h));
+          ctx.stroke();
+
+          const font = Math.min(18, Math.max(10, 11 * (s / 900))) * dpr;
+          ctx.font = `500 ${font}px ui-sans-serif, system-ui, sans-serif`;
+          ctx.fillStyle = "rgba(255,255,255,0.34)";
+          ctx.fillText(line.label, gx, Math.max(top, 0) + 6 * dpr);
+        }
+      }
+
       // Region fields, under the tiles so the art is never tinted.
       //
       // Drawn as a few concentric copies of the outline rather than a

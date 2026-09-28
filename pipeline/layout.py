@@ -569,6 +569,29 @@ OUTLINE_SMOOTH = 6        # angular bins either side, so the edge is not jagged
 OUTLINE_SLACK = 1.16      # and a margin beyond that, so tiles sit well inside
 
 
+def timeline_grid(pos: np.ndarray, years: np.ndarray,
+                  window: int = 6) -> list[dict]:
+    """Where each century boundary falls along a left-to-right timeline.
+
+    Read from the works rather than computed from the layout: each
+    century's width follows the square root of its size, so x is not a
+    linear function of the year and the boundary cannot be placed by
+    arithmetic. Taking the median x of the works dated within a few years
+    of the boundary puts the line where the data actually turns over.
+    """
+    if len(pos) == 0:
+        return []
+    out = []
+    lo, hi = int(years.min()), int(years.max())
+    for year in range((lo // 100) * 100, (hi // 100 + 1) * 100 + 1, 100):
+        near = np.abs(years - year) <= window
+        if near.sum() < 20:
+            continue
+        out.append({"x": round(float(np.median(pos[near, 0])), 4),
+                    "label": str(year)})
+    return out
+
+
 def region_hues(centres: dict[str, np.ndarray]) -> dict[str, float]:
     """One hue per region, spread evenly but in similarity order.
 
