@@ -14,7 +14,8 @@ const facetNote: Record<Facet, string> = {
     + "look, not by date — that order turns out to be chronological — and "
     + "within each, works run oldest to newest along the arc.",
   country: "Regions are present-day countries, placed by how their works look.",
-  style: "Regions are predicted styles. 387 works sit outside the taxonomy.",
+  style: "Regions are predicted styles, plus one for the works no "
+    + "style in the taxonomy fits.",
 };
 
 const FACETS: { key: Facet; label: string }[] = [
@@ -53,7 +54,7 @@ export default function App() {
   }, [pin]);
 
   if (error) return <div className="status">Could not load the map: {error}</div>;
-  if (!bundle) return <div className="status">Loading 9,130 works…</div>;
+  if (!bundle) return <div className="status">Loading the collection…</div>;
 
   return (
     <div className="app">

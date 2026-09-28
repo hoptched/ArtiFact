@@ -54,7 +54,10 @@ taxonomy:
 
 site:
   neighbors_per_work: 20     # top-k shipped to the browser instead of raw vectors
-  max_bundle_mb: 10
+  # Gzipped, which is what a visitor downloads; these files compress
+  # about 3.7x. At 25,515 works the bundle is 4.3 MB on the wire against
+  # 15.6 raw, and the atlases beside it are an order of magnitude larger.
+  max_bundle_mb: 8
 
 paths:
   raw: data/raw

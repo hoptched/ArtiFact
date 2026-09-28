@@ -113,8 +113,9 @@ export class Comparer {
 
     const { count, dim } = this.meta!;
     const vectors = this.vectors!, norms = this.norms!;
-    // A flat scan: 9,130 dot products of 512 terms is a few milliseconds,
-    // and an index would be more machinery than the problem deserves.
+    // A flat scan: 25,515 dot products of 768 terms is a few
+    // milliseconds, and an index would be more machinery than the
+    // problem deserves.
     const scores = new Float32Array(count);
     for (let i = 0; i < count; i++) {
       let dot = 0;

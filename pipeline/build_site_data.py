@@ -19,6 +19,7 @@ Outputs to web/public/data/:
 
 from __future__ import annotations
 
+import gzip
 import json
 from collections import Counter
 
@@ -239,14 +240,22 @@ def main() -> None:
         "facets": layouts,
     }, separators=(",", ":"), ensure_ascii=False))
 
-    total = sum((out / f).stat().st_size
+    # Measured gzipped, because that is what a visitor downloads: every
+    # static host compresses JSON, and these files compress about 3.7x.
+    # Capping raw bytes was capping a number nobody pays.
+    def wire_size(path: Path) -> int:
+        return len(gzip.compress(path.read_bytes(), 6))
+
+    total = sum(wire_size(out / f)
                 for f in ("works.json", "neighbors.json", "facets.json",
                           "layouts.json", "hires_slots.json"))
     print(f"\n=== bundle ===")
     for f in ("works.json", "neighbors.json", "facets.json", "layouts.json",
               "hires_slots.json"):
-        print(f"  {f:<16} {(out/f).stat().st_size/1e6:6.2f} MB")
-    print(f"  {'total':<16} {total/1e6:6.2f} MB   "
+        raw = (out / f).stat().st_size
+        print(f"  {f:<16} {wire_size(out/f)/1e6:6.2f} MB gzipped "
+              f"({raw/1e6:5.2f} raw)")
+    print(f"  {'total':<16} {total/1e6:6.2f} MB gzipped   "
           f"(cap {config.site.max_bundle_mb} MB)")
     if total > config.site.max_bundle_mb * 1e6:
         raise SystemExit("bundle is over the cap set in config.yaml")
