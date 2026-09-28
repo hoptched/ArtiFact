@@ -43,6 +43,36 @@ def work_radius(n: int) -> float:
     return float(np.sqrt(PACKING * DISC_R ** 2 / max(n, 1)))
 
 
+# Where the band starts resisting, as a fraction of its half-width, and
+# how far past that anything can ever get.
+SOFT_LIMIT_KNEE = 0.72
+# How much of the space between neighbours a tile takes up. Under 1
+# leaves visible air; at 1 they sit edge to edge.
+TILE_FILL = 0.80
+
+
+def soft_limit(y: np.ndarray, band: np.ndarray) -> np.ndarray:
+    """Hold values inside the band without stacking them against its wall.
+
+    np.clip put everything that overflowed at exactly the limit, so the
+    band grew a one-work-thick crust; relaxation then pushed the interior
+    off that crust and left a gap behind it. Four of those read as cracks
+    running the length of the ribbon.
+
+    Compressing smoothly past a knee instead means nothing has a wall to
+    pile against: the interior is untouched, and the outside is squeezed
+    by a tanh that approaches the edge without ever reaching it.
+    """
+    knee = band * SOFT_LIMIT_KNEE
+    room = np.maximum(band - knee, 1e-9)
+    over = np.abs(y) - knee
+    beyond = over > 0
+    out = y.copy()
+    out[beyond] = np.sign(y[beyond]) * (
+        knee[beyond] + room[beyond] * np.tanh(over[beyond] / room[beyond]))
+    return out
+
+
 def fitted_radius(pos: np.ndarray, nominal: float) -> float:
     """The tile radius this layout can actually carry.
 
@@ -58,8 +88,9 @@ def fitted_radius(pos: np.ndarray, nominal: float) -> float:
     if len(pos) < 2:
         return nominal
     gaps = cKDTree(pos).query(pos, k=2)[0][:, 1]
-    # Half the typical gap, so neighbours touch rather than overlap.
-    return float(min(nominal, np.median(gaps) / 2))
+    # A shade under half the typical gap, so neighbours have air between
+    # them rather than sitting edge to edge.
+    return float(min(nominal, np.median(gaps) / 2 * TILE_FILL))
 
 
 def footprint_scale(works: list[dict]) -> np.ndarray:
@@ -735,7 +766,7 @@ def build(vecs: np.ndarray, works: list[dict], facet: str) -> tuple:
         for _ in range(ARC_CONSTRAIN_ROUNDS):
             placed = relax(placed, radius=wr, scale=fs,
                            iters=RELAX_ITERS // ARC_CONSTRAIN_ROUNDS)
-            placed[:, 1] = np.clip(placed[:, 1], -band, band)
+            placed[:, 1] = soft_limit(placed[:, 1], band)
         pos, centres, radii = to_unit(placed, centres, radii)
     else:
         pos, centres, radii = to_unit(placed, centres, radii)
