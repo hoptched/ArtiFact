@@ -62,8 +62,8 @@ export default function App() {
         <header>
           <h1>ArtiFact</h1>
           <p>
-            {bundle.works.length.toLocaleString()} public-domain works from
-            the Art Institute of Chicago, arranged by how they look.
+            A collection of {bundle.works.length.toLocaleString()}{" "}
+            public-domain works from the Art Institute of Chicago.
           </p>
         </header>
 
