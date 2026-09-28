@@ -1,5 +1,6 @@
 import type { Bundle } from "./useData";
 import { iiifUrl } from "./types";
+import type { Facet } from "./types";
 
 const CONFIDENCE_STEPS = 3;
 
@@ -16,11 +17,13 @@ function Confidence({ value }: { value: number }) {
 }
 
 export function Detail({
-  bundle, index, onSelect, onClose,
+  bundle, index, onSelect, onGoTo, onClose,
 }: {
   bundle: Bundle;
   index: number;
   onSelect: (index: number) => void;
+  /** Follow one of this work's facts onto the map. */
+  onGoTo: (facet: Facet) => void;
   onClose: () => void;
 }) {
   const { works, facets, neighbors } = bundle;
@@ -47,10 +50,15 @@ export function Detail({
       <h2>{work.t}</h2>
       {work.a && <p className="artist">{work.a.split("\n")[0]}</p>}
 
+      {/* Each fact is a way into the map: the grouping it belongs to,
+          centred on this work. */}
       <dl>
         <dt>Date</dt>
         <dd>
-          {work.d ?? "—"}
+          <button className="jump" onClick={() => onGoTo("period")}
+                  title="Find this work on the timeline">
+            {work.d ?? "—"}
+          </button>
           <span className="muted"> · {work.p} ({work.prec})</span>
           {work.pb.length > 1 && (
             <span className="muted"> · spans {work.pb.length} periods</span>
@@ -58,7 +66,12 @@ export function Detail({
         </dd>
 
         <dt>Place</dt>
-        <dd>{work.c}</dd>
+        <dd>
+          <button className="jump" onClick={() => onGoTo("country")}
+                  title={`Find this work among works from ${work.c}`}>
+            {work.c}
+          </button>
+        </dd>
 
         <dt>Style</dt>
         <dd>
@@ -72,7 +85,10 @@ export function Detail({
             </>
           ) : (
             <>
-              <span className="predicted">{work.s}</span>
+              <button className="jump predicted" onClick={() => onGoTo("style")}
+                      title={`Find this work among ${work.s}`}>
+                {work.s}
+              </button>
               <span className="muted"> predicted</span>
               {work.sc !== null && <Confidence value={work.sc} />}
             </>

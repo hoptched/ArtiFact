@@ -242,6 +242,22 @@ dd { margin: 0; font-size: 0.85rem; }
 .note { display: block; margin-top: 4px; font-size: 0.74rem; line-height: 1.45; }
 
 .predicted { color: var(--accent); font-weight: 600; }
+
+/* A fact you can follow onto the map. It reads as the value it is, not
+   as a control, so the only standing cue is the dotted rule under it. */
+.jump {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  border-bottom: 1px dotted rgba(255, 255, 255, 0.35);
+}
+.jump:hover,
+.jump:focus-visible { border-bottom-color: var(--accent); color: var(--accent); }
+
 .withheld { color: var(--muted); font-style: italic; }
 
 .conf { display: inline-flex; align-items: center; gap: 3px; margin-left: 8px; }

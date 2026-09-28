@@ -40,6 +40,33 @@ export default function App() {
   const flyTo = useCallback(
     (x: number, y: number) => setFocus({ x, y, r: 0.06, key: Date.now() }), []);
 
+  // Only one thing is ever the selected thing. The uploaded picture and a
+  // work from the collection wear the same halo and open panels that
+  // occupy the same place, so choosing either has to release the other.
+  const selectWork = useCallback((i: number | null) => {
+    setSelected(i);
+    if (i !== null) setShowOwn(false);
+  }, []);
+  const openPin = useCallback(() => {
+    setShowOwn(true);
+    setSelected(null);
+  }, []);
+
+  // Follow one of a work's own facts onto the map: switch to that
+  // grouping and travel to where this work lands in it. The works are
+  // still moving into place while the flight runs, and both finish at
+  // the same coordinates, so the view arrives with the work rather than
+  // waiting for it.
+  const goTo = useCallback((f: Facet) => {
+    if (!bundle || selected === null) return;
+    const layout = bundle.layouts.facets[f];
+    const at = layout.xy[selected];
+    if (!at) return;
+    const r = (layout.work_radius ?? bundle.layouts.work_radius) * 3.8;
+    setFacet(f);
+    setFocus({ x: at[0], y: at[1], r, key: Date.now() });
+  }, [bundle, selected]);
+
   // The map draws a decoded image, so hold the pin back until it has
   // loaded rather than flashing an empty frame where the picture goes.
   useEffect(() => {
@@ -104,10 +131,11 @@ export default function App() {
           bundle={bundle}
           facet={facet}
           selected={selected}
-          onSelect={setSelected}
+          onSelect={selectWork}
           focus={focus}
           pin={mapPin}
-          onOpenPin={() => setShowOwn(true)}
+          pinActive={showOwn}
+          onOpenPin={openPin}
           onRegion={(x, y, r) =>
             setFocus({ x, y, r: Math.max(r, 0.02), key: Date.now() })}
         />
@@ -127,7 +155,8 @@ export default function App() {
         <Detail
           bundle={bundle}
           index={selected}
-          onSelect={setSelected}
+          onSelect={selectWork}
+          onGoTo={goTo}
           onClose={() => setSelected(null)}
         />
       )}

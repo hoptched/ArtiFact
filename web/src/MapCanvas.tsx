@@ -127,13 +127,16 @@ export interface MapPin {
 }
 
 export function MapCanvas({
-  bundle, facet, selected, onSelect, focus, pin, onOpenPin, onRegion,
+  bundle, facet, selected, onSelect, focus, pin, pinActive, onOpenPin,
+  onRegion,
 }: {
   bundle: Bundle;
   facet: Facet;
   selected: number | null;
   onSelect: (index: number | null) => void;
   focus: Focus | null;
+  /** Whether the uploaded picture is the thing currently selected. */
+  pinActive: boolean;
   pin: MapPin | null;
   onOpenPin: () => void;
   onRegion: (x: number, y: number, r: number) => void;
@@ -566,7 +569,9 @@ export function MapCanvas({
           const ph = ar2 >= 1 ? box / ar2 : box;
 
           pinRectRef.current = { x, y, w: pw, h: ph };
-          glow(ctx, x, y, pw, ph, dpr);
+          // Only when it is the selected thing. Two halos at once says
+          // two things are chosen, and nothing says which panel is open.
+          if (pinActive) glow(ctx, x, y, pw, ph, dpr);
           if (im.complete && im.naturalWidth) {
             ctx.imageSmoothingEnabled = true;
             ctx.drawImage(im, x - pw / 2, y - ph / 2, pw, ph);
@@ -652,7 +657,7 @@ export function MapCanvas({
     frame = requestAnimationFrame(draw);
     return () => { cancelAnimationFrame(frame); ro.disconnect(); };
   }, [works, layouts, facet, atlasMeta, sheets, mips, radius, fit, ready,
-      images, hires, hiAtlas, focus, pin]);
+      images, hires, hiAtlas, focus, pin, pinActive]);
 
   useEffect(() => {
     if (!focus) return;
