@@ -211,8 +211,9 @@ export function MapCanvas({
       // read against, not a thing to look at.
       const rules = layouts.facets[facet].grid;
       if (rules && rules.length) {
-        const top = (0 - vy) * s + cy;
-        const bottom = (1 - vy) * s + cy;
+        // Full height of the viewport, not of the map. The ribbon is a
+        // tenth as tall as it is wide, so ruling map-space 0..1 put almost
+        // all of every line below the works instead of through them.
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
         for (const line of rules) {
@@ -221,14 +222,14 @@ export function MapCanvas({
           ctx.strokeStyle = "rgba(255,255,255,0.09)";
           ctx.lineWidth = 1 * dpr;
           ctx.beginPath();
-          ctx.moveTo(gx, Math.max(top, 0));
-          ctx.lineTo(gx, Math.min(bottom, h));
+          ctx.moveTo(gx, 0);
+          ctx.lineTo(gx, h);
           ctx.stroke();
 
-          const font = Math.min(18, Math.max(10, 11 * (s / 900))) * dpr;
+          const font = Math.min(20, Math.max(11, 12 * (s / 900))) * dpr;
           ctx.font = `500 ${font}px ui-sans-serif, system-ui, sans-serif`;
-          ctx.fillStyle = "rgba(255,255,255,0.34)";
-          ctx.fillText(line.label, gx, Math.max(top, 0) + 6 * dpr);
+          ctx.fillStyle = "rgba(255,255,255,0.4)";
+          ctx.fillText(line.label, gx, 10 * dpr);
         }
       }
 
@@ -469,7 +470,10 @@ export function MapCanvas({
         ctx.strokeRect(px - r, py - r, r * 2, r * 2);
       }
 
-      if (scale < LABEL_MAX_SCALE) {
+      // Region names, except where the rules already name the axis — on
+      // the timeline they said the same thing twice and landed on top of
+      // the works while doing it.
+      if (scale < LABEL_MAX_SCALE && !(rules && rules.length)) {
         const regions = layouts.facets[facet].regions;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
