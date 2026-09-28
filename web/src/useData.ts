@@ -8,6 +8,8 @@ export interface Bundle {
   neighbors: Record<string, number[]>;
   atlasMeta: AtlasMeta;
   sheets: HTMLImageElement[];
+  /** Quarter-size copies of the sheets, 16px to a tile. */
+  mips: HTMLCanvasElement[];
   hires: { meta: AtlasMeta; slots: number[] } | null;
 }
 
@@ -17,6 +19,37 @@ async function json<T>(path: string): Promise<T> {
   const res = await fetch(base + path);
   if (!res.ok) throw new Error(`${path}: ${res.status}`);
   return res.json() as Promise<T>;
+}
+
+/**
+ * A quarter-size copy of a sheet: 16px to a tile instead of 64.
+ *
+ * Zoomed out, a tile is a handful of pixels but the browser still reads
+ * the whole 64x64 cell and filters it down. At 3.5px — the smallest size
+ * that still draws a thumbnail — that is 21,786 tiles sampling 4,096
+ * source pixels each, 89 million a frame, which is why the map dragged
+ * just above the threshold and was fine just below it, where cells are
+ * flat colour.
+ *
+ * Halved twice rather than quartered in one step: a single large
+ * reduction samples too sparsely to represent what it skips, and the
+ * result crawls as you pan.
+ */
+function mipOf(img: HTMLImageElement, sheetPx: number): HTMLCanvasElement {
+  let src: HTMLImageElement | HTMLCanvasElement = img;
+  let px = sheetPx;
+  for (let step = 0; step < 2; step++) {
+    const half = document.createElement("canvas");
+    half.width = half.height = px / 2;
+    const c = half.getContext("2d");
+    if (!c) break;
+    c.imageSmoothingEnabled = true;
+    c.imageSmoothingQuality = "high";
+    c.drawImage(src, 0, 0, px / 2, px / 2);
+    src = half;
+    px /= 2;
+  }
+  return src as HTMLCanvasElement;
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -57,8 +90,9 @@ export function useBundle() {
         // that owns the render loop, 25 teardowns and restarts of it
         // during the one moment the map is busiest.
         const sheets: HTMLImageElement[] = [];
+        const mips: HTMLCanvasElement[] = [];
         setBundle({ works, layouts, facets, neighbors: {}, atlasMeta, sheets,
-                    hires: null });
+                    mips, hires: null });
 
         // Only read when a detail panel opens, which cannot happen before
         // there is a map to click on. Awaiting it here put 3.5 MB of JSON
@@ -89,9 +123,13 @@ export function useBundle() {
           for (let s = next++; s < atlasMeta.sheets; s = next++) {
             if (cancelled) return;
             try {
-              sheets[s] = await loadImage(
+              const img = await loadImage(
                 `${base}atlas/atlas_${String(s).padStart(3, "0")}.jpg`,
               );
+              // Before the sheet is published, so no frame can find a
+              // sheet without its reduction and fall back mid-pan.
+              mips[s] = mipOf(img, atlasMeta.sheet_px);
+              sheets[s] = img;
             } catch { /* one missing sheet leaves colour cells there */ }
           }
         };

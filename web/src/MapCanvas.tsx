@@ -11,6 +11,8 @@ interface View { x: number; y: number; scale: number }
 // Below this many pixels per tile there is no point paying for a texture
 // lookup — a coloured square and a thumbnail are indistinguishable.
 const THUMB_MIN_PX = 3.5;
+/** Tile size in the reduced atlas: a quarter of the 64px cell. */
+const MIP_TILE = 16;
 // Below this many CSS pixels a tile is too small to aim at, so a click
 // inside a region means the region rather than whichever work happened to
 // be nearest the cursor.
@@ -130,7 +132,7 @@ export function MapCanvas({
   const flyRef = useRef<
     { from: View; to: View; start: number; ms: number } | null>(null);
 
-  const { works, layouts, atlasMeta, sheets, facets, hires } = bundle;
+  const { works, layouts, atlasMeta, sheets, mips, facets, hires } = bundle;
   // Per facet: a left-to-right timeline is a ribbon an eighth the area
   // of the round layouts, so it carries a smaller tile.
   const radius = layouts.facets[facet].work_radius ?? layouts.work_radius;
@@ -346,6 +348,12 @@ export function MapCanvas({
       const pos = posRef.current;
       const size = Math.max(1, radius * 2 * s);
       const useThumbs = size >= THUMB_MIN_PX && sheets.length > 0;
+      // Below this a tile does not use a 64px cell, it only pays to read
+      // one. The reduction is exact at MIP_TILE and a clean downscale
+      // under it; above it the full sheet is cheap anyway, because the
+      // tiles are large enough that few are on screen.
+      const useMip = useThumbs && size <= MIP_TILE && mips.length > 0;
+      const srcTile = useMip ? MIP_TILE : atlasMeta.tile;
       const { tile, grid, per_sheet } = atlasMeta;
       // Cull generously: one tile of slop stops edges popping in.
       const pad = size + 4;
@@ -435,18 +443,19 @@ export function MapCanvas({
         }
 
         const sheetIndex = (i / per_sheet) | 0;
-        const sheet = useThumbs ? sheets[sheetIndex] : undefined;
+        const sheet = useThumbs
+          ? (useMip ? mips[sheetIndex] : sheets[sheetIndex]) : undefined;
         if (sheet) {
           // The atlas cell is square with the work letterboxed inside it,
           // so read back only the occupied part. Drawing the whole cell
           // would paint its padding over the neighbouring tiles.
           const within = i % per_sheet;
-          const iw = ar >= 1 ? tile : tile * ar;
-          const ih = ar >= 1 ? tile / ar : tile;
+          const iw = ar >= 1 ? srcTile : srcTile * ar;
+          const ih = ar >= 1 ? srcTile / ar : srcTile;
           ctx.drawImage(
             sheet,
-            (within % grid) * tile + (tile - iw) / 2,
-            ((within / grid) | 0) * tile + (tile - ih) / 2,
+            (within % grid) * srcTile + (srcTile - iw) / 2,
+            ((within / grid) | 0) * srcTile + (srcTile - ih) / 2,
             iw, ih,
             px - hw, py - hh, tw, th,
           );
@@ -581,7 +590,7 @@ export function MapCanvas({
     };
     frame = requestAnimationFrame(draw);
     return () => { cancelAnimationFrame(frame); ro.disconnect(); };
-  }, [works, layouts, facet, atlasMeta, sheets, radius, fit, ready,
+  }, [works, layouts, facet, atlasMeta, sheets, mips, radius, fit, ready,
       images, hires, hiAtlas, focus, pin]);
 
   useEffect(() => {
