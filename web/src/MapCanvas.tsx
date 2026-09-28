@@ -33,6 +33,18 @@ function regionTint(cx: number, cy: number, alpha: number) {
   return `oklch(0.62 0.11 ${hue.toFixed(0)} / ${alpha})`;
 }
 
+/** Ray casting, in the map's own 0..1 space so no per-frame screen copy
+ *  of the outline is needed. */
+function inside(poly: [number, number][], x: number, y: number) {
+  let hit = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i], [xj, yj] = poly[j];
+    if ((yi > y) !== (yj > y)
+        && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) hit = !hit;
+  }
+  return hit;
+}
+
 const easeInOut = (t: number) =>
   t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
@@ -66,10 +78,6 @@ export function MapCanvas({
   const toRef = useRef<Float32Array>(new Float32Array(0));
   const animRef = useRef<{ start: number } | null>(null);
   const dragRef = useRef<{ x: number; y: number; moved: boolean } | null>(null);
-  // Screen geometry of each region, written while drawing so a click and a
-  // hover test exactly what is on screen.
-  const regionHitsRef = useRef<
-    { name: string; x: number; y: number; r: number; wx: number; wy: number }[]>([]);
   const hoverRef = useRef<string | null>(null);
   // Screen rectangle of the uploaded picture, written each frame so a
   // click can be tested against it before the nearest-work search.
@@ -191,26 +199,53 @@ export function MapCanvas({
       ctx.fillStyle = "#0d0d0f";
       ctx.fillRect(0, 0, w, h);
 
-      // Region discs, under the tiles so the art is never tinted.
-      const regions = layouts.facets[facet].regions;
-      const hits: typeof regionHitsRef.current = [];
-      for (const region of regions) {
+      // Region fields, under the tiles so the art is never tinted. The
+      // outline follows the works inside rather than circling them, and
+      // the fill fades to nothing at the edge so regions bleed into each
+      // other the way their contents do.
+      for (const region of layouts.facets[facet].regions) {
         const rx = (region.c[0] - vx) * s + cx;
         const ry = (region.c[1] - vy) * s + cy;
         const rr = region.r * s;
-        if (rx + rr < 0 || ry + rr < 0 || rx - rr > w || ry - rr > h) continue;
-        hits.push({ name: region.name, x: rx, y: ry, r: rr,
-                    wx: region.c[0], wy: region.c[1] });
+        if (rx + rr * 2 < 0 || ry + rr * 2 < 0
+            || rx - rr * 2 > w || ry - rr * 2 > h) continue;
         const on = hoverRef.current === region.name;
+
         ctx.beginPath();
-        ctx.arc(rx, ry, rr, 0, Math.PI * 2);
-        ctx.fillStyle = regionTint(region.c[0], region.c[1], on ? 0.3 : 0.12);
+        const outline = region.o;
+        if (outline && outline.length > 2) {
+          // Quadratic through the midpoints of consecutive vertices, so a
+          // 72-point profile draws as a curve rather than a polygon.
+          const px0 = (outline[0][0] - vx) * s + cx;
+          const py0 = (outline[0][1] - vy) * s + cy;
+          const last = outline[outline.length - 1];
+          ctx.moveTo(((last[0] - vx) * s + cx + px0) / 2,
+                     ((last[1] - vy) * s + cy + py0) / 2);
+          for (let i = 0; i < outline.length; i++) {
+            const a = outline[i];
+            const b = outline[(i + 1) % outline.length];
+            const ax = (a[0] - vx) * s + cx, ay = (a[1] - vy) * s + cy;
+            const bx = (b[0] - vx) * s + cx, by = (b[1] - vy) * s + cy;
+            ctx.quadraticCurveTo(ax, ay, (ax + bx) / 2, (ay + by) / 2);
+          }
+        } else {
+          ctx.arc(rx, ry, rr, 0, Math.PI * 2);
+        }
+        ctx.closePath();
+
+        const grad = ctx.createRadialGradient(rx, ry, rr * 0.15, rx, ry, rr * 1.1);
+        grad.addColorStop(0, regionTint(region.c[0], region.c[1], on ? 0.34 : 0.15));
+        grad.addColorStop(0.65, regionTint(region.c[0], region.c[1], on ? 0.2 : 0.08));
+        grad.addColorStop(1, regionTint(region.c[0], region.c[1], 0));
+        ctx.fillStyle = grad;
         ctx.fill();
-        ctx.lineWidth = (on ? 2 : 1) * dpr;
-        ctx.strokeStyle = regionTint(region.c[0], region.c[1], on ? 0.85 : 0.35);
-        ctx.stroke();
+
+        if (on) {
+          ctx.lineWidth = 1.5 * dpr;
+          ctx.strokeStyle = regionTint(region.c[0], region.c[1], 0.7);
+          ctx.stroke();
+        }
       }
-      regionHitsRef.current = hits;
 
       const pos = posRef.current;
       const size = Math.max(1, radius * 2 * s);
@@ -497,12 +532,15 @@ export function MapCanvas({
       const canvas = canvasRef.current;
       if (!canvas) return;
       const box = canvas.getBoundingClientRect();
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const px = (e.clientX - box.left) * dpr, py = (e.clientY - box.top) * dpr;
+      const view = viewRef.current;
+      const wx = (e.clientX - box.left - box.width / 2) / view.scale + view.x;
+      const wy = (e.clientY - box.top - box.height / 2) / view.scale + view.y;
       let best: string | null = null, bestR = Infinity;
-      for (const hit of regionHitsRef.current) {
-        const d = Math.hypot(px - hit.x, py - hit.y);
-        if (d <= hit.r && hit.r < bestR) { bestR = hit.r; best = hit.name; }
+      for (const region of layouts.facets[facet].regions) {
+        const within = region.o
+          ? inside(region.o, wx, wy)
+          : Math.hypot(wx - region.c[0], wy - region.c[1]) <= region.r;
+        if (within && region.r < bestR) { bestR = region.r; best = region.name; }
       }
       if (best !== hoverRef.current) {
         hoverRef.current = best;
@@ -557,17 +595,17 @@ export function MapCanvas({
     }
 
     // Empty space inside a region: go to the region instead of deselecting.
-    const canvas = canvasRef.current!;
-    const box = canvas.getBoundingClientRect();
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const px = (e.clientX - box.left) * dpr, py = (e.clientY - box.top) * dpr;
-    let pick: typeof regionHitsRef.current[0] | null = null;
-    for (const hit of regionHitsRef.current) {
-      const d = Math.hypot(px - hit.x, py - hit.y);
-      if (d <= hit.r && (!pick || hit.r < pick.r)) pick = hit;
+    let pick: { c: [number, number]; r: number } | null = null;
+    for (const region of layouts.facets[facet].regions) {
+      const within = region.o
+        ? inside(region.o, world.x, world.y)
+        : Math.hypot(world.x - region.c[0], world.y - region.c[1]) <= region.r;
+      if (within && (!pick || region.r < pick.r)) {
+        pick = { c: region.c, r: region.r };
+      }
     }
     if (pick) {
-      onRegion(pick.wx, pick.wy, pick.r / (viewRef.current.scale * dpr));
+      onRegion(pick.c[0], pick.c[1], pick.r);
       return;
     }
     onSelect(null);

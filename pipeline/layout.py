@@ -423,6 +423,60 @@ def relax(pos: np.ndarray, radius: float, iters: int = RELAX_ITERS,
     return pos
 
 
+OUTLINE_BINS = 72
+OUTLINE_PCT = 93          # robust to a few strays without clipping the body
+OUTLINE_SMOOTH = 5        # angular bins either side, so the edge is not jagged
+
+
+def region_outline(points: np.ndarray, centre: np.ndarray,
+                   fallback: float) -> list[list[float]]:
+    """A closed outline that follows the works inside a region.
+
+    A circle is the wrong shape: these regions are UMAP offsets scaled into
+    a disc, so they come out lobed and concave and a circle either clips
+    them or floats far off their edge.
+
+    They are, however, near enough star-shaped about their own centre —
+    that is how place() builds them — so the boundary can be a radial
+    profile: for each angular bin, how far out the works actually reach.
+    A high percentile rather than the maximum, so one stray work does not
+    pull a spike, and a circular smoothing pass so the edge reads as a
+    shape rather than a sawtooth.
+    """
+    rel = points - centre
+    radius = np.linalg.norm(rel, axis=1)
+    angle = np.arctan2(rel[:, 1], rel[:, 0])
+    bins = np.clip(((angle + np.pi) / (2 * np.pi) * OUTLINE_BINS).astype(int),
+                   0, OUTLINE_BINS - 1)
+
+    reach = np.full(OUTLINE_BINS, np.nan)
+    for b in range(OUTLINE_BINS):
+        here = radius[bins == b]
+        if len(here):
+            reach[b] = np.percentile(here, OUTLINE_PCT)
+
+    if np.all(np.isnan(reach)):
+        reach = np.full(OUTLINE_BINS, fallback)
+    else:
+        # Empty bins borrow from their neighbours rather than collapsing.
+        idx = np.arange(OUTLINE_BINS)
+        good = ~np.isnan(reach)
+        reach = np.interp(idx, idx[good], reach[good], period=OUTLINE_BINS)
+
+    k = OUTLINE_SMOOTH
+    kernel = np.ones(2 * k + 1) / (2 * k + 1)
+    smooth = np.convolve(np.r_[reach[-k:], reach, reach[:k]], kernel, "valid")
+    # A little air, so tiles sit inside their own outline.
+    smooth = smooth * 1.06 + fallback * 0.04
+
+    out = []
+    for b in range(OUTLINE_BINS):
+        a = (b + 0.5) / OUTLINE_BINS * 2 * np.pi - np.pi
+        out.append([round(float(centre[0] + smooth[b] * np.cos(a)), 4),
+                    round(float(centre[1] + smooth[b] * np.sin(a)), 4)])
+    return out
+
+
 def overlap_count(pos: np.ndarray, radius: float) -> int:
     from scipy.spatial import cKDTree
     return len(cKDTree(pos).query_pairs(radius * 2 * 0.95))

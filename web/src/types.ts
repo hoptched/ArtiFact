@@ -23,6 +23,8 @@ export interface Region {
   c: [number, number];
   r: number;
   n: number;
+  /** Closed outline following the works inside, in the same 0..1 space. */
+  o?: [number, number][];
 }
 
 export interface Layouts {

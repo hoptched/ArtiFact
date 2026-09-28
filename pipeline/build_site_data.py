@@ -211,7 +211,10 @@ def main() -> None:
                  "c": [round(float(centres[name][0]), 4),
                        round(float(centres[name][1]), 4)],
                  "r": round(float(radii[name]), 4),
-                 "n": sizes[name]}
+                 "n": sizes[name],
+                 "o": layout.region_outline(
+                     pos[[i for i, l in enumerate(labels) if l == name]],
+                     centres[name], float(radii[name]))}
                 for name in sorted(sizes, key=lambda k: -sizes[k])
                 if name in centres],
             "region_of": labels,
