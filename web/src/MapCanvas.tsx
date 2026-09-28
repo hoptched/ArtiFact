@@ -29,6 +29,33 @@ const LABEL_MAX_SCALE = 4200;
 const ANIM_MS = 750;
 const FLY_MS = 900;
 
+/**
+ * The halo that marks a work: the selection, and the uploaded picture.
+ *
+ * It has to be hollow, because the work sits inside it and a filled blur
+ * would simply cover it. So the shape that casts the shadow is an
+ * outline, drawn far off-canvas with the shadow offset back by the same
+ * amount — only the light lands, never the shape. Three passes, because
+ * one is too faint to find against the tiles, and the outline sits
+ * slightly proud of the work so the light falls outside its edge.
+ */
+function glow(ctx: CanvasRenderingContext2D,
+              x: number, y: number, w: number, h: number, dpr: number) {
+  const OFF = 1e5;
+  const gap = 2 * dpr;
+  ctx.save();
+  ctx.shadowColor = "rgba(245,196,81,0.9)";
+  ctx.shadowBlur = 12 * dpr;
+  ctx.shadowOffsetX = OFF;
+  ctx.strokeStyle = "#000";
+  ctx.lineWidth = 3 * dpr;
+  for (let pass = 0; pass < 3; pass++) {
+    ctx.strokeRect(x - w / 2 - gap - OFF, y - h / 2 - gap,
+                   w + gap * 2, h + gap * 2);
+  }
+  ctx.restore();
+}
+
 /** A uniform grid over the layout, so a frame can ask "what is in this
  *  rectangle" instead of walking all 25,515 works. Stored the way a
  *  sparse matrix is — a start offset per cell, and one flat array of work
@@ -528,28 +555,22 @@ export function MapCanvas({
           const x = (at[0] - vx) * s + cx;
           const y = (at[1] - vy) * s + cy;
           const im = pin.img;
-          const box = Math.max(size * 3.2, 52 * dpr);
+          // Marked the way a selected work is marked, and sized the way
+          // one is: it belongs among its neighbours rather than looming
+          // over them. It used to sit on a dark plate inside a gold
+          // frame at three times tile size, which read as a different
+          // kind of object altogether.
+          const box = Math.max(size, SELECTED_MIN_PX * dpr);
           const ar2 = im.naturalWidth / Math.max(im.naturalHeight, 1) || 1;
           const pw = ar2 >= 1 ? box : box * ar2;
           const ph = ar2 >= 1 ? box / ar2 : box;
 
-          pinRectRef.current = { x, y, w: pw + 6 * dpr, h: ph + 6 * dpr };
-          const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 420);
-          ctx.save();
-          ctx.shadowColor = "rgba(245,196,81,0.9)";
-          ctx.shadowBlur = (10 + 10 * pulse) * dpr;
-          ctx.fillStyle = "#0d0d0f";
-          ctx.fillRect(x - pw / 2 - 3 * dpr, y - ph / 2 - 3 * dpr,
-                       pw + 6 * dpr, ph + 6 * dpr);
-          ctx.restore();
-
+          pinRectRef.current = { x, y, w: pw, h: ph };
+          glow(ctx, x, y, pw, ph, dpr);
           if (im.complete && im.naturalWidth) {
+            ctx.imageSmoothingEnabled = true;
             ctx.drawImage(im, x - pw / 2, y - ph / 2, pw, ph);
           }
-          ctx.strokeStyle = "#f5c451";
-          ctx.lineWidth = 2 * dpr;
-          ctx.strokeRect(x - pw / 2 - 3 * dpr, y - ph / 2 - 3 * dpr,
-                         pw + 6 * dpr, ph + 6 * dpr);
 
           ctx.font = `600 ${11 * dpr}px ui-sans-serif, system-ui, sans-serif`;
           ctx.textAlign = "center";
@@ -578,26 +599,7 @@ export function MapCanvas({
         const bh = ar >= 1 ? box / ar : box;
         selRectRef.current = { x: px, y: py, w: bw, h: bh };
 
-        // A glow rather than a box, and it has to be hollow: the work
-        // sits inside it and a filled blur would simply cover it. So the
-        // shape that casts the shadow is an outline, and it is drawn far
-        // off-canvas with the shadow offset back by the same amount —
-        // only the shadow lands, never the shape. Three passes, because
-        // one is too faint to find against the tiles. The outline sits
-        // slightly proud of the work so the light falls outside it.
-        const OFF = 1e5;
-        ctx.save();
-        ctx.shadowColor = "rgba(245,196,81,0.9)";
-        ctx.shadowBlur = 12 * dpr;
-        ctx.shadowOffsetX = OFF;
-        ctx.strokeStyle = "#000";
-        ctx.lineWidth = 3 * dpr;
-        const gap = 2 * dpr;
-        for (let pass = 0; pass < 3; pass++) {
-          ctx.strokeRect(px - bw / 2 - gap - OFF, py - bh / 2 - gap,
-                         bw + gap * 2, bh + gap * 2);
-        }
-        ctx.restore();
+        glow(ctx, px, py, bw, bh, dpr);
 
         // Zoomed out the tile underneath is a speck, so draw the work
         // again at the floor size. Close in the tile is already there at
