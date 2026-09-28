@@ -62,7 +62,11 @@ export default function App() {
     const layout = bundle.layouts.facets[f];
     const at = layout.xy[selected];
     if (!at) return;
-    const r = (layout.work_radius ?? bundle.layouts.work_radius) * 3.8;
+    // The radius to frame, as a multiple of a work's own. Larger means
+    // further out: at 3.8 the work filled about 200px and its neighbours
+    // were mostly off screen, which told you where it was but not what
+    // it had landed among.
+    const r = (layout.work_radius ?? bundle.layouts.work_radius) * 6.5;
     setFacet(f);
     setFocus({ x: at[0], y: at[1], r, key: Date.now() });
   }, [bundle, selected]);
