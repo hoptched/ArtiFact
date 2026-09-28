@@ -276,17 +276,17 @@ export function MapCanvas({
 
       // Region fields, under the tiles so the art is never tinted.
       //
-      // Drawn as a few concentric copies of the outline rather than a
-      // radial gradient: a gradient centred on the region leaves the
-      // interior patchy wherever the works are not centred, which is most
-      // of them. Flat inside, feathered outward, no stroke — the shape
-      // should read as a field the works sit in, not an enclosure.
-      const RINGS = [
-        { grow: 1.0, alpha: 1.0 },
-        { grow: 1.07, alpha: 0.55 },
-        { grow: 1.15, alpha: 0.3 },
-        { grow: 1.24, alpha: 0.14 },
-      ];
+      // One flat fill per region, blurred by the canvas filter. This was
+      // four concentric copies of the outline at falling alpha, which is
+      // a step function however many copies you use: each boundary shows
+      // as a contour line, and the field read as a topographic map.
+      // Blurring one shape gives a falloff with no boundary in it at all.
+      // Still not a radial gradient — that leaves the interior patchy
+      // wherever the works are not centred, which is most of them.
+      //
+      // The shape is grown a little first because the blur eats inward as
+      // well as outward, and the interior should stay solid.
+      const GLOW_GROW = 1.05;
       for (const region of
            TINTED_FACETS.has(facet) ? layouts.facets[facet].regions : []) {
         const rx = (region.c[0] - vx) * s + cx;
@@ -298,31 +298,37 @@ export function MapCanvas({
         const hue = region.h ?? 0;
         const outline = region.o;
 
-        for (const ring of RINGS) {
-          ctx.beginPath();
-          if (outline && outline.length > 2) {
-            const at = (i: number): [number, number] => {
-              const q = outline[(i + outline.length) % outline.length];
-              return [
-                (region.c[0] + (q[0] - region.c[0]) * ring.grow - vx) * s + cx,
-                (region.c[1] + (q[1] - region.c[1]) * ring.grow - vy) * s + cy,
-              ];
-            };
-            const [lx, ly] = at(-1);
-            const [fx, fy] = at(0);
-            ctx.moveTo((lx + fx) / 2, (ly + fy) / 2);
-            for (let i = 0; i < outline.length; i++) {
-              const [ax, ay] = at(i);
-              const [bx, by] = at(i + 1);
-              ctx.quadraticCurveTo(ax, ay, (ax + bx) / 2, (ay + by) / 2);
-            }
-          } else {
-            ctx.arc(rx, ry, rr * ring.grow, 0, Math.PI * 2);
+        ctx.beginPath();
+        if (outline && outline.length > 2) {
+          const at = (i: number): [number, number] => {
+            const q = outline[(i + outline.length) % outline.length];
+            return [
+              (region.c[0] + (q[0] - region.c[0]) * GLOW_GROW - vx) * s + cx,
+              (region.c[1] + (q[1] - region.c[1]) * GLOW_GROW - vy) * s + cy,
+            ];
+          };
+          const [lx, ly] = at(-1);
+          const [fx, fy] = at(0);
+          ctx.moveTo((lx + fx) / 2, (ly + fy) / 2);
+          for (let i = 0; i < outline.length; i++) {
+            const [ax, ay] = at(i);
+            const [bx, by] = at(i + 1);
+            ctx.quadraticCurveTo(ax, ay, (ax + bx) / 2, (ay + by) / 2);
           }
-          ctx.closePath();
-          ctx.fillStyle = regionTint(hue, (on ? 0.2 : 0.085) * ring.alpha);
-          ctx.fill();
+        } else {
+          ctx.arc(rx, ry, rr * GLOW_GROW, 0, Math.PI * 2);
         }
+        ctx.closePath();
+        // Proportional to the region, so the softness of an edge looks
+        // the same at every zoom, but capped: a blur of many hundreds of
+        // pixels costs far more than it shows.
+        ctx.filter = `blur(${Math.min(Math.max(rr * 0.13, 4 * dpr),
+                                      110 * dpr).toFixed(1)}px)`;
+        // Alpha matched to what the four stacked rings composited to, so
+        // the fields carry the same weight as before.
+        ctx.fillStyle = regionTint(hue, on ? 0.35 : 0.16);
+        ctx.fill();
+        ctx.filter = "none";
       }
 
       const pos = posRef.current;
