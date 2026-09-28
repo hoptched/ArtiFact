@@ -22,15 +22,13 @@ const FLY_MS = 900;
  * hues apart anyway. Identity stays with the label, which every region
  * already has.
  *
- * Instead the hue comes from where the region sits in the layout, which is
- * a similarity projection — so regions that look alike are tinted alike,
- * and the colour says something true. Lightness and chroma are constant,
- * so no region reads as more important than another, and alpha is low
- * enough that the pictures stay the brightest thing on screen.
+ * The hue is ranked by position in the layout and spread over the whole
+ * wheel, so regions that look alike are tinted alike while the map still
+ * uses more than one part of the spectrum. Lightness and chroma are held
+ * constant, so no region reads as more important than another.
  */
-function regionTint(cx: number, cy: number, alpha: number) {
-  const hue = ((Math.atan2(cy - 0.5, cx - 0.5) * 180) / Math.PI + 360) % 360;
-  return `oklch(0.62 0.11 ${hue.toFixed(0)} / ${alpha})`;
+function regionTint(hue: number, alpha: number) {
+  return `oklch(0.66 0.13 ${hue.toFixed(0)} / ${alpha})`;
 }
 
 /** Ray casting, in the map's own 0..1 space so no per-frame screen copy
@@ -199,51 +197,53 @@ export function MapCanvas({
       ctx.fillStyle = "#0d0d0f";
       ctx.fillRect(0, 0, w, h);
 
-      // Region fields, under the tiles so the art is never tinted. The
-      // outline follows the works inside rather than circling them, and
-      // the fill fades to nothing at the edge so regions bleed into each
-      // other the way their contents do.
+      // Region fields, under the tiles so the art is never tinted.
+      //
+      // Drawn as a few concentric copies of the outline rather than a
+      // radial gradient: a gradient centred on the region leaves the
+      // interior patchy wherever the works are not centred, which is most
+      // of them. Flat inside, feathered outward, no stroke — the shape
+      // should read as a field the works sit in, not an enclosure.
+      const RINGS = [
+        { grow: 1.0, alpha: 1.0 },
+        { grow: 1.07, alpha: 0.55 },
+        { grow: 1.15, alpha: 0.3 },
+        { grow: 1.24, alpha: 0.14 },
+      ];
       for (const region of layouts.facets[facet].regions) {
         const rx = (region.c[0] - vx) * s + cx;
         const ry = (region.c[1] - vy) * s + cy;
         const rr = region.r * s;
-        if (rx + rr * 2 < 0 || ry + rr * 2 < 0
-            || rx - rr * 2 > w || ry - rr * 2 > h) continue;
+        if (rx + rr * 2.5 < 0 || ry + rr * 2.5 < 0
+            || rx - rr * 2.5 > w || ry - rr * 2.5 > h) continue;
         const on = hoverRef.current === region.name;
-
-        ctx.beginPath();
+        const hue = region.h ?? 0;
         const outline = region.o;
-        if (outline && outline.length > 2) {
-          // Quadratic through the midpoints of consecutive vertices, so a
-          // 72-point profile draws as a curve rather than a polygon.
-          const px0 = (outline[0][0] - vx) * s + cx;
-          const py0 = (outline[0][1] - vy) * s + cy;
-          const last = outline[outline.length - 1];
-          ctx.moveTo(((last[0] - vx) * s + cx + px0) / 2,
-                     ((last[1] - vy) * s + cy + py0) / 2);
-          for (let i = 0; i < outline.length; i++) {
-            const a = outline[i];
-            const b = outline[(i + 1) % outline.length];
-            const ax = (a[0] - vx) * s + cx, ay = (a[1] - vy) * s + cy;
-            const bx = (b[0] - vx) * s + cx, by = (b[1] - vy) * s + cy;
-            ctx.quadraticCurveTo(ax, ay, (ax + bx) / 2, (ay + by) / 2);
+
+        for (const ring of RINGS) {
+          ctx.beginPath();
+          if (outline && outline.length > 2) {
+            const at = (i: number): [number, number] => {
+              const q = outline[(i + outline.length) % outline.length];
+              return [
+                (region.c[0] + (q[0] - region.c[0]) * ring.grow - vx) * s + cx,
+                (region.c[1] + (q[1] - region.c[1]) * ring.grow - vy) * s + cy,
+              ];
+            };
+            const [lx, ly] = at(-1);
+            const [fx, fy] = at(0);
+            ctx.moveTo((lx + fx) / 2, (ly + fy) / 2);
+            for (let i = 0; i < outline.length; i++) {
+              const [ax, ay] = at(i);
+              const [bx, by] = at(i + 1);
+              ctx.quadraticCurveTo(ax, ay, (ax + bx) / 2, (ay + by) / 2);
+            }
+          } else {
+            ctx.arc(rx, ry, rr * ring.grow, 0, Math.PI * 2);
           }
-        } else {
-          ctx.arc(rx, ry, rr, 0, Math.PI * 2);
-        }
-        ctx.closePath();
-
-        const grad = ctx.createRadialGradient(rx, ry, rr * 0.15, rx, ry, rr * 1.1);
-        grad.addColorStop(0, regionTint(region.c[0], region.c[1], on ? 0.34 : 0.15));
-        grad.addColorStop(0.65, regionTint(region.c[0], region.c[1], on ? 0.2 : 0.08));
-        grad.addColorStop(1, regionTint(region.c[0], region.c[1], 0));
-        ctx.fillStyle = grad;
-        ctx.fill();
-
-        if (on) {
-          ctx.lineWidth = 1.5 * dpr;
-          ctx.strokeStyle = regionTint(region.c[0], region.c[1], 0.7);
-          ctx.stroke();
+          ctx.closePath();
+          ctx.fillStyle = regionTint(hue, (on ? 0.2 : 0.085) * ring.alpha);
+          ctx.fill();
         }
       }
 

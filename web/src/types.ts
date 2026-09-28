@@ -25,6 +25,8 @@ export interface Region {
   n: number;
   /** Closed outline following the works inside, in the same 0..1 space. */
   o?: [number, number][];
+  /** Hue in degrees, spread evenly but ordered by similarity. */
+  h?: number;
 }
 
 export interface Layouts {

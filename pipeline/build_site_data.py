@@ -201,6 +201,7 @@ def main() -> None:
         sizes: dict[str, int] = {}
         for l in labels:
             sizes[l] = sizes.get(l, 0) + 1
+        hues = layout.region_hues(centres)
         layouts[facet] = {
             "xy": [[round(float(x), 4), round(float(y), 4)] for x, y in pos],
             # The similarity layout has no regions at all — position is the
@@ -212,6 +213,7 @@ def main() -> None:
                        round(float(centres[name][1]), 4)],
                  "r": round(float(radii[name]), 4),
                  "n": sizes[name],
+                 "h": hues.get(name, 0.0),
                  "o": layout.region_outline(
                      pos[[i for i, l in enumerate(labels) if l == name]],
                      centres[name], float(radii[name]))}

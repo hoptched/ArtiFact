@@ -424,8 +424,28 @@ def relax(pos: np.ndarray, radius: float, iters: int = RELAX_ITERS,
 
 
 OUTLINE_BINS = 72
-OUTLINE_PCT = 93          # robust to a few strays without clipping the body
-OUTLINE_SMOOTH = 5        # angular bins either side, so the edge is not jagged
+OUTLINE_PCT = 98          # reach far enough that the region owns its works
+OUTLINE_SMOOTH = 6        # angular bins either side, so the edge is not jagged
+OUTLINE_SLACK = 1.16      # and a margin beyond that, so tiles sit well inside
+
+
+def region_hues(centres: dict[str, np.ndarray]) -> dict[str, float]:
+    """One hue per region, spread evenly but in similarity order.
+
+    Taking hue straight from the angle of a region's position bunched them:
+    regions are not evenly distributed around the layout, so two thirds of
+    the style map came out blue. Ranking by angle and then spreading the
+    ranks over the full circle keeps neighbouring regions neighbouring in
+    hue — which is the property worth having, since adjacency here means
+    visual similarity — while using the whole wheel.
+    """
+    if not centres:
+        return {}
+    mean = np.mean(np.vstack(list(centres.values())), axis=0)
+    order = sorted(centres, key=lambda n: float(
+        np.arctan2(centres[n][1] - mean[1], centres[n][0] - mean[0])))
+    return {name: round(i / len(order) * 360.0, 1)
+            for i, name in enumerate(order)}
 
 
 def region_outline(points: np.ndarray, centre: np.ndarray,
@@ -466,8 +486,9 @@ def region_outline(points: np.ndarray, centre: np.ndarray,
     k = OUTLINE_SMOOTH
     kernel = np.ones(2 * k + 1) / (2 * k + 1)
     smooth = np.convolve(np.r_[reach[-k:], reach, reach[:k]], kernel, "valid")
-    # A little air, so tiles sit inside their own outline.
-    smooth = smooth * 1.06 + fallback * 0.04
+    # Air beyond the furthest works, so tiles sit well inside their own
+    # region rather than straddling its edge.
+    smooth = smooth * OUTLINE_SLACK + fallback * 0.06
 
     out = []
     for b in range(OUTLINE_BINS):
