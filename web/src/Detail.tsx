@@ -101,7 +101,12 @@ export function Detail({
       {/* Neighbours load after the map, so this is briefly absent rather
           than a heading over an empty row. */}
       {similar.length > 0 && <>
-      <h3>Visually similar</h3>
+      <h3>
+        <button className="jump" onClick={() => onGoTo("similarity")}
+                title="Find this work among its neighbours on the map">
+          Visually similar
+        </button>
+      </h3>
       <div className="similar">
         {similar.map((id) => {
           const i = indexOfId.get(id);
