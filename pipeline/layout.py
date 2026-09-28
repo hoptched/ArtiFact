@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from pipeline.taxonomy import OUTSIDE_TAXONOMY
+from pipeline.taxonomy import OUTSIDE_TAXONOMY, period_label
 
 # A region holding fewer than this is a speck on the map; 23 of the 35
 # countries are below it, together holding 292 works.
@@ -75,42 +75,34 @@ def facet_values(works: list[dict], facet: str) -> list[str]:
         # The midpoint bin, not the overlap set: a region layout needs one
         # home per work. period_bins still drives filtering.
         #
-        # Bins below MIN_REGION are merged into the ends. Seven bins hold
-        # between 1 and 7 works each, and their centroids are noise: with
-        # them included the chronology the map recovers falls from 0.995 to
-        # 0.677, because a single 6th-century work gets the same say in the
-        # layout as 2,173 Victorian ones.
-        counts: dict[str, int] = {}
+        # Bins below MIN_REGION are merged into the ends, and a merged end
+        # only earns its own region if it is big enough to be one — a
+        # labelled region for a single work is noise, not information.
+        counts: dict[int, int] = {}
         for w in works:
-            counts[w["p"]] = counts.get(w["p"], 0) + 1
-        keep = {k for k, n in counts.items() if n >= MIN_REGION}
-        big = sorted(int(k.split("\u2013")[0]) for k in keep)
-        first, last = big[0], big[-1]
-        label_of = {int(k.split("\u2013")[0]): k for k in keep}
+            counts[w["pbin"]] = counts.get(w["pbin"], 0) + 1
+        keep = {b for b, n in counts.items() if n >= MIN_REGION}
+        if not keep:
+            keep = {max(counts, key=lambda b: counts[b])}
+        first, last = min(keep), max(keep)
 
-        # A merged end-bucket only earns its own region if it is big
-        # enough to be one. "Before 1450" holds 120 works and is a real
-        # part of the collection; "1900 and later" held exactly one, and a
-        # labelled region for a single work is just noise on the map.
         ends = {"before": 0, "after": 0}
         for w in works:
-            if counts[w["p"]] >= MIN_REGION:
+            if w["pbin"] in keep:
                 continue
-            side = "before" if int(w["p"].split("\u2013")[0]) < first else "after"
-            ends[side] += 1
+            ends["before" if w["pbin"] < first else "after"] += 1
 
         out = []
         for w in works:
-            if counts[w["p"]] >= MIN_REGION:
-                out.append(w["p"])
-                continue
-            start = int(w["p"].split("\u2013")[0])
-            if start < first:
-                out.append(f"Before {first}" if ends["before"] >= MIN_REGION
-                           else label_of[first])
+            b = w["pbin"]
+            if b in keep:
+                out.append(period_label(b))
+            elif b < first:
+                out.append(f"Before {period_label(first)}"
+                           if ends["before"] >= MIN_REGION else period_label(first))
             else:
-                out.append(f"{last} and later" if ends["after"] >= MIN_REGION
-                           else label_of[last])
+                out.append(f"{period_label(last)} onward"
+                           if ends["after"] >= MIN_REGION else period_label(last))
         return out
     if facet == "style":
         # The 43-class head predicts 21 styles fewer than 50 times each on
@@ -193,22 +185,23 @@ def region_centres(vecs: np.ndarray, labels: list[str]) -> dict[str, np.ndarray]
 # Facets whose regions have a genuine one-dimensional order, laid out
 # along an arc instead of freely in the plane.
 ARC_FACETS = {"period"}
+ARC_SWEEP = 1.5 * np.pi     # 270 degrees, so the two ends never meet
+# Bins are drawn well inside one another, so a century boundary reads as a
+# transition rather than a seam.
+ARC_OVERLAP = 0.58
 
 
 def _period_sort_key(label: str) -> int:
-    """Chronological order of a period label, for the two merged buckets
-    and the ordinary "1500-1549" form alike. Used only to decide which way
-    round to draw the arc, never which order the regions go in."""
+    """Chronological order of a period label, for the merged end buckets
+    and ordinary century labels alike. Used only to decide which way round
+    to draw the arc, never which order the regions go in."""
     if label.startswith("Before"):
         return -9999
-    if "later" in label:
+    if label.endswith("onward"):
         return 9999
-    return int(label.split("\u2013")[0])
-ARC_SWEEP = 1.5 * np.pi     # 270 degrees, so the two ends never meet
-# Adjacent bins are drawn closer than their radii, so their clouds
-# interpenetrate. A century boundary is a convention, not a rupture: 1599
-# and 1600 look alike, and the map should say so.
-ARC_OVERLAP = 0.74
+    digits = "".join(c for c in label.split()[0] if c.isdigit())
+    century = int(digits) if digits else 0
+    return (century - 1) * 100 * (-1 if "BCE" in label else 1)
 
 
 def arc_centres(mds: dict[str, np.ndarray], sizes: dict[str, int],
@@ -390,7 +383,14 @@ def place(xy_local: np.ndarray, labels: list[str],
         perp = np.array([-u[1], u[0]])
         rank = np.argsort(np.argsort(along_key[mask])).astype(np.float64)
         along = (rank / max(len(rank) - 1, 1) - 0.5) * 2.0
-        across = local @ perp
+        # Across the arc, rank rather than raw offset. The embedding has
+        # long tails, and using them directly left wisps of visually
+        # unusual works trailing off a band that is otherwise dense —
+        # which reads as scatter in a facet organised purely by date.
+        # Ranking keeps the order and drops the tails.
+        across_raw = local @ perp
+        across_rank = np.argsort(np.argsort(across_raw)).astype(np.float64)
+        across = (across_rank / max(len(across_rank) - 1, 1) - 0.5) * 2.0
         out[mask] = (centre
                      + np.outer(along * radii[name], u)
                      + np.outer(across * radii[name] * 0.62, perp))

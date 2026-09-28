@@ -49,7 +49,7 @@ model:
 taxonomy:
   # Decided 2026-09-22 over named_eras: ~10% of the corpus is Chinese,
   # Japanese, Indian, Tibetan or Iranian, and era names are Eurocentric.
-  period_scheme: fifty_year_bins   # fifty_year_bins | named_eras
+  period_scheme: century_bins      # century_bins | fifty_year_bins | named_eras
   unknown_label: Unknown
 
 site:

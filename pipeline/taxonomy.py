@@ -14,7 +14,7 @@ from __future__ import annotations
 # meaningless for a Qing scroll or a Tibetan thangka. Bins are mechanical
 # and never wrong, at the cost of a lopsided grid: 1800-1899 holds 45% of
 # the corpus.
-BIN_WIDTH = 50
+BIN_WIDTH = 100
 
 
 def period_bin(date_start: int, date_end: int, max_span: int) -> int | None:
@@ -71,9 +71,22 @@ def date_precision(date_start: int, date_end: int) -> str:
 
 
 def period_label(bin_start: int) -> str:
+    """The century a bin covers, named rather than spelled as a range.
+
+    "17th century" is how anyone refers to this, and it reads at a glance
+    where "1600-1649" makes you do arithmetic. Hundred-year bins also
+    halve the number of period regions, leaving each dense enough to look
+    like a region rather than a smear.
+    """
     if bin_start < 0:
-        return f"{abs(bin_start + BIN_WIDTH - 1)}–{abs(bin_start)} BCE"
-    return f"{bin_start}–{bin_start + BIN_WIDTH - 1}"
+        return f"{_ordinal(abs(bin_start) // 100 + 1)} century BCE"
+    return f"{_ordinal(bin_start // 100 + 1)} century"
+
+
+def _ordinal(n: int) -> str:
+    if 11 <= n % 100 <= 13:
+        return f"{n}th"
+    return f"{n}{ {1: 'st', 2: 'nd', 3: 'rd'}.get(n % 10, 'th') }"
 
 
 # --- Country --------------------------------------------------------------

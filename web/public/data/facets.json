@@ -2,127 +2,127 @@
   "periods": [
     {
       "bin": 0,
-      "label": "0–49",
+      "label": "1st century",
       "count": 3
     },
     {
       "bin": 500,
-      "label": "500–549",
+      "label": "6th century",
       "count": 1
     },
     {
       "bin": 550,
-      "label": "550–599",
+      "label": "6th century",
       "count": 1
     },
     {
       "bin": 600,
-      "label": "600–649",
+      "label": "7th century",
       "count": 1
     },
     {
       "bin": 750,
-      "label": "750–799",
+      "label": "8th century",
       "count": 1
     },
     {
       "bin": 1000,
-      "label": "1000–1049",
+      "label": "11th century",
       "count": 1
     },
     {
       "bin": 1050,
-      "label": "1050–1099",
+      "label": "11th century",
       "count": 2
     },
     {
       "bin": 1100,
-      "label": "1100–1149",
+      "label": "12th century",
       "count": 4
     },
     {
       "bin": 1150,
-      "label": "1150–1199",
+      "label": "12th century",
       "count": 5
     },
     {
       "bin": 1200,
-      "label": "1200–1249",
+      "label": "13th century",
       "count": 9
     },
     {
       "bin": 1250,
-      "label": "1250–1299",
+      "label": "13th century",
       "count": 17
     },
     {
       "bin": 1300,
-      "label": "1300–1349",
+      "label": "14th century",
       "count": 58
     },
     {
       "bin": 1350,
-      "label": "1350–1399",
+      "label": "14th century",
       "count": 56
     },
     {
       "bin": 1400,
-      "label": "1400–1449",
+      "label": "15th century",
       "count": 102
     },
     {
       "bin": 1450,
-      "label": "1450–1499",
+      "label": "15th century",
       "count": 607
     },
     {
       "bin": 1500,
-      "label": "1500–1549",
+      "label": "16th century",
       "count": 1425
     },
     {
       "bin": 1550,
-      "label": "1550–1599",
+      "label": "16th century",
       "count": 1931
     },
     {
       "bin": 1600,
-      "label": "1600–1649",
+      "label": "17th century",
       "count": 3007
     },
     {
       "bin": 1650,
-      "label": "1650–1699",
+      "label": "17th century",
       "count": 2095
     },
     {
       "bin": 1700,
-      "label": "1700–1749",
+      "label": "18th century",
       "count": 2455
     },
     {
       "bin": 1750,
-      "label": "1750–1799",
+      "label": "18th century",
       "count": 5503
     },
     {
       "bin": 1800,
-      "label": "1800–1849",
+      "label": "19th century",
       "count": 6858
     },
     {
       "bin": 1850,
-      "label": "1850–1899",
+      "label": "19th century",
       "count": 7206
     },
     {
       "bin": 1900,
-      "label": "1900–1949",
+      "label": "20th century",
       "count": 1791
     },
     {
       "bin": 1950,
-      "label": "1950–1999",
+      "label": "20th century",
       "count": 5
     }
   ],

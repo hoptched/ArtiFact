@@ -152,6 +152,9 @@ def main() -> None:
             # bin, so the seam between two bins is where their dates meet.
             "my": (r["date_start"] + r["date_end"]) // 2,
             "p": r["period"],
+            # The bin's numeric start, so nothing downstream has to parse
+            # a human label back into a year.
+            "pbin": r["period_bin"],
             "prec": r["date_precision"],
             "c": r["country"],
             "s": style,

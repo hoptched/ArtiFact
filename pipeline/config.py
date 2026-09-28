@@ -84,7 +84,7 @@ class Config:
             raise FileNotFoundError(f"no config at {path}")
         raw = yaml.safe_load(path.read_text())
 
-        valid_schemes = {"fifty_year_bins", "named_eras"}
+        valid_schemes = {"century_bins", "fifty_year_bins", "named_eras"}
         scheme = raw["taxonomy"]["period_scheme"]
         if scheme not in valid_schemes:
             raise ValueError(
