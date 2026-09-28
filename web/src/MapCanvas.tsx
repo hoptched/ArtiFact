@@ -84,6 +84,11 @@ export function MapCanvas({
   const toRef = useRef<Float32Array>(new Float32Array(0));
   const animRef = useRef<{ start: number } | null>(null);
   const dragRef = useRef<{ x: number; y: number; moved: boolean } | null>(null);
+  // Which work wears the highlight. A ref rather than a dependency of the
+  // render effect: selecting is the most common thing anyone does here,
+  // and it changes one rectangle, not the loop that draws the map.
+  const selectedRef = useRef<number | null>(selected);
+  selectedRef.current = selected;
   const hoverRef = useRef<string | null>(null);
   // Screen rectangle of the uploaded picture, written each frame so a
   // click can be tested against it before the nearest-work search.
@@ -185,8 +190,16 @@ export function MapCanvas({
     const resize = () => {
       const rect = canvas.getBoundingClientRect();
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width = Math.round(rect.width * dpr);
-      canvas.height = Math.round(rect.height * dpr);
+      const w = Math.round(rect.width * dpr);
+      const h = Math.round(rect.height * dpr);
+      // Only when it really changed. Assigning either of these wipes the
+      // canvas even if the value is identical, and this runs on every
+      // re-entry into the effect, so an unguarded write showed up as a
+      // black frame on something as ordinary as a click.
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+      }
       if (viewRef.current.scale === 0) fit();
     };
     resize();
@@ -489,9 +502,10 @@ export function MapCanvas({
 
       if (!pin) pinRectRef.current = null;
 
-      if (selected !== null) {
-        const px = (pos[selected * 2] - vx) * s + cx;
-        const py = (pos[selected * 2 + 1] - vy) * s + cy;
+      const highlight = selectedRef.current;
+      if (highlight !== null) {
+        const px = (pos[highlight * 2] - vx) * s + cx;
+        const py = (pos[highlight * 2 + 1] - vy) * s + cy;
         const r = Math.max(size * 0.95, 9 * dpr);
         ctx.strokeStyle = "#f5c451";
         ctx.lineWidth = 2 * dpr;
@@ -522,7 +536,7 @@ export function MapCanvas({
     };
     frame = requestAnimationFrame(draw);
     return () => { cancelAnimationFrame(frame); ro.disconnect(); };
-  }, [works, layouts, facet, atlasMeta, sheets, radius, selected, fit, ready,
+  }, [works, layouts, facet, atlasMeta, sheets, radius, fit, ready,
       images, hires, hiAtlas, focus, pin]);
 
   useEffect(() => {
