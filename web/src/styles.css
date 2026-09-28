@@ -142,63 +142,6 @@ body {
   line-height: 1.5;
 }
 
-.regions {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;          /* so the list scrolls instead of the rail */
-  flex: 1 1 auto;
-}
-/* No scrollbar: the rows divide whatever height is left and the type
-   scales with them. Style has the most regions at 18, so that is the case
-   this has to survive; with 11 the rows simply stop growing at the cap. */
-.regions ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  min-height: 0;
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  container-type: size;
-}
-.regions li {
-  flex: 1 1 0;
-  min-height: 0;
-  display: flex;
-}
-.regions ul button {
-  width: 100%;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  background: none;
-  border: none;
-  color: var(--ink);
-  font-family: inherit;
-  /* 1cqh is 1% of the list's own height, so this tracks the row size. */
-  font-size: clamp(0.62rem, 3.4cqh, 0.82rem);
-  text-align: left;
-  padding: 0 6px;
-  border-radius: 6px;
-  cursor: pointer;
-  overflow: hidden;
-  white-space: nowrap;
-}
-.regions ul button span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.regions ul button:hover { background: rgba(255, 255, 255, 0.09); }
-.regions ul button em {
-  font-style: normal;
-  color: var(--muted);
-  font-size: 0.88em;
-  flex: none;
-  font-variant-numeric: tabular-nums;
-}
-
 .sidebar .reset { text-align: center; padding: 6px; }
 
 .stage { position: relative; flex: 1 1 auto; min-width: 0; }
