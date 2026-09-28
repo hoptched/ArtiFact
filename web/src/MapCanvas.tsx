@@ -10,6 +10,10 @@ interface View { x: number; y: number; scale: number }
 // Below this many pixels per tile there is no point paying for a texture
 // lookup — a coloured square and a thumbnail are indistinguishable.
 const THUMB_MIN_PX = 3.5;
+// Below this many CSS pixels a tile is too small to aim at, so a click
+// inside a region means the region rather than whichever work happened to
+// be nearest the cursor.
+const WORK_CLICK_MIN_PX = 13;
 const LABEL_MAX_SCALE = 4200;
 const ANIM_MS = 750;
 const FLY_MS = 900;
@@ -579,6 +583,27 @@ export function MapCanvas({
     }
 
     const world = toWorld(e.clientX, e.clientY);
+
+    // Smallest region containing the point, if any.
+    let pick: { c: [number, number]; r: number } | null = null;
+    for (const region of layouts.facets[facet].regions) {
+      const within = region.o
+        ? inside(region.o, world.x, world.y)
+        : Math.hypot(world.x - region.c[0], world.y - region.c[1]) <= region.r;
+      if (within && (!pick || region.r < pick.r)) {
+        pick = { c: region.c, r: region.r };
+      }
+    }
+
+    // Zoomed out far enough that tiles are specks: aiming at one is not a
+    // gesture anyone can perform, so a click inside a region goes to the
+    // region. Close in, picking a work is exactly what a click means.
+    const tilePx = radius * 2 * viewRef.current.scale;
+    if (pick && tilePx < WORK_CLICK_MIN_PX) {
+      onRegion(pick.c[0], pick.c[1], pick.r);
+      return;
+    }
+
     const pos = posRef.current;
     // Nearest work within a few tile-widths, so a click near a gap does
     // nothing rather than selecting something across the map.
@@ -595,15 +620,6 @@ export function MapCanvas({
     }
 
     // Empty space inside a region: go to the region instead of deselecting.
-    let pick: { c: [number, number]; r: number } | null = null;
-    for (const region of layouts.facets[facet].regions) {
-      const within = region.o
-        ? inside(region.o, world.x, world.y)
-        : Math.hypot(world.x - region.c[0], world.y - region.c[1]) <= region.r;
-      if (within && (!pick || region.r < pick.r)) {
-        pick = { c: region.c, r: region.r };
-      }
-    }
     if (pick) {
       onRegion(pick.c[0], pick.c[1], pick.r);
       return;
