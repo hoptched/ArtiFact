@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { buildFields } from "./regionFields";
 import type { Bundle } from "./useData";
 import type { Facet } from "./types";
 import { ImageCache, TIER2_MIN_PX } from "./imageCache";
@@ -21,23 +22,6 @@ const TINTED_FACETS = new Set<Facet>(["country", "style"]);
 const LABEL_MAX_SCALE = 4200;
 const ANIM_MS = 750;
 const FLY_MS = 900;
-
-/**
- * A region's tint.
- *
- * Not a categorical palette: at 43 style regions, assigning identity by
- * hue would mean cycling or generating colours, and no reader can tell 43
- * hues apart anyway. Identity stays with the label, which every region
- * already has.
- *
- * The hue is ranked by position in the layout and spread over the whole
- * wheel, so regions that look alike are tinted alike while the map still
- * uses more than one part of the spectrum. Lightness and chroma are held
- * constant, so no region reads as more important than another.
- */
-function regionTint(hue: number, alpha: number) {
-  return `oklch(0.66 0.13 ${hue.toFixed(0)} / ${alpha})`;
-}
 
 /** A uniform grid over the layout, so a frame can ask "what is in this
  *  rectangle" instead of walking all 25,515 works. Stored the way a
@@ -171,6 +155,14 @@ export function MapCanvas({
   // rather than querying an index that no longer describes them.
   const gridIndex = useMemo(
     () => buildGrid(flatten(facet)), [flatten, facet]);
+
+  // Baked once per facet. Hovering only changes how heavily a field is
+  // drawn, not the field, so it costs nothing here.
+  const fields = useMemo(
+    () => (TINTED_FACETS.has(facet)
+      ? buildFields(layouts.facets[facet].regions) : []),
+    [layouts, facet],
+  );
 
   // Where the whole of *this* facet sits. Fitting to a fixed unit square
   // put the timeline near the top of the screen and small: it is a ribbon
@@ -331,60 +323,23 @@ export function MapCanvas({
       }
 
       // Region fields, under the tiles so the art is never tinted.
-      //
-      // One flat fill per region, blurred by the canvas filter. This was
-      // four concentric copies of the outline at falling alpha, which is
-      // a step function however many copies you use: each boundary shows
-      // as a contour line, and the field read as a topographic map.
-      // Blurring one shape gives a falloff with no boundary in it at all.
-      // Still not a radial gradient — that leaves the interior patchy
-      // wherever the works are not centred, which is most of them.
-      //
-      // The shape is grown a little first because the blur eats inward as
-      // well as outward, and the interior should stay solid.
-      const GLOW_GROW = 1.05;
-      for (const region of
-           TINTED_FACETS.has(facet) ? layouts.facets[facet].regions : []) {
-        const rx = (region.c[0] - vx) * s + cx;
-        const ry = (region.c[1] - vy) * s + cy;
-        const rr = region.r * s;
-        if (rx + rr * 2.5 < 0 || ry + rr * 2.5 < 0
-            || rx - rr * 2.5 > w || ry - rr * 2.5 > h) continue;
-        const on = hoverRef.current === region.name;
-        const hue = region.h ?? 0;
-        const outline = region.o;
-
-        ctx.beginPath();
-        if (outline && outline.length > 2) {
-          const at = (i: number): [number, number] => {
-            const q = outline[(i + outline.length) % outline.length];
-            return [
-              (region.c[0] + (q[0] - region.c[0]) * GLOW_GROW - vx) * s + cx,
-              (region.c[1] + (q[1] - region.c[1]) * GLOW_GROW - vy) * s + cy,
-            ];
-          };
-          const [lx, ly] = at(-1);
-          const [fx, fy] = at(0);
-          ctx.moveTo((lx + fx) / 2, (ly + fy) / 2);
-          for (let i = 0; i < outline.length; i++) {
-            const [ax, ay] = at(i);
-            const [bx, by] = at(i + 1);
-            ctx.quadraticCurveTo(ax, ay, (ax + bx) / 2, (ay + by) / 2);
-          }
-        } else {
-          ctx.arc(rx, ry, rr * GLOW_GROW, 0, Math.PI * 2);
+      // One blit each, from a texture baked when the facet was chosen.
+      // Filling and blurring these per frame cost in proportion to the
+      // area they covered, which is why the tinted facets dragged and the
+      // timeline did not.
+      if (fields.length) {
+        // Set explicitly: the tile pass below turns smoothing off once
+        // tiles are large, and a field scaled up without it is a staircase.
+        ctx.imageSmoothingEnabled = true;
+        for (const f of fields) {
+          const fx = (f.x0 - vx) * s + cx;
+          const fy = (f.y0 - vy) * s + cy;
+          const fw = f.w * s, fh = f.h * s;
+          if (fx + fw < 0 || fy + fh < 0 || fx > w || fy > h) continue;
+          ctx.globalAlpha = hoverRef.current === f.name ? 0.35 : 0.16;
+          ctx.drawImage(f.tex, fx, fy, fw, fh);
         }
-        ctx.closePath();
-        // Proportional to the region, so the softness of an edge looks
-        // the same at every zoom, but capped: a blur of many hundreds of
-        // pixels costs far more than it shows.
-        ctx.filter = `blur(${Math.min(Math.max(rr * 0.13, 4 * dpr),
-                                      110 * dpr).toFixed(1)}px)`;
-        // Alpha matched to what the four stacked rings composited to, so
-        // the fields carry the same weight as before.
-        ctx.fillStyle = regionTint(hue, on ? 0.35 : 0.16);
-        ctx.fill();
-        ctx.filter = "none";
+        ctx.globalAlpha = 1;
       }
 
       const pos = posRef.current;
