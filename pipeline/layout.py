@@ -277,7 +277,7 @@ def arc_centres(mds: dict[str, np.ndarray], sizes: dict[str, int],
     length = 2.0 * ARC_OVERLAP * sum(rad.values())
     radius = length / ARC_SWEEP
     centres: dict[str, np.ndarray] = {}
-    tangents: dict[str, np.ndarray] = {}
+    tangents: dict[str, float] = {}
     travelled = 0.0
     for i in order:
         name = names[i]
@@ -285,11 +285,11 @@ def arc_centres(mds: dict[str, np.ndarray], sizes: dict[str, int],
         theta = ARC_SWEEP * (travelled / length) - ARC_SWEEP / 2
         centres[name] = np.array([radius * np.sin(theta),
                                   -radius * np.cos(theta)])
-        # Direction of travel along the arc, so a region can lay its works
-        # out chronologically across its own width.
-        tangents[name] = np.array([np.cos(theta), np.sin(theta)])
+        # The angle itself, so works can be placed on the arc rather than
+        # on a line tangent to it.
+        tangents[name] = float(theta)
         travelled += rad[name] * ARC_OVERLAP
-    return centres, rad, tangents
+    return centres, rad, {"theta": tangents, "radius": radius}
 
 
 def pack_regions(centres: dict[str, np.ndarray], sizes: dict[str, int],
@@ -382,7 +382,7 @@ def _fit_unit(local: np.ndarray) -> np.ndarray:
 
 def place(xy_local: np.ndarray, labels: list[str],
           centres: dict[str, np.ndarray], radii: dict[str, float],
-          tangents: dict[str, np.ndarray] | None = None,
+          arc: dict | None = None,
           along_key: np.ndarray | None = None,
           tile_radius: float = 0.002) -> np.ndarray:
     """Work positions: region centre plus the work's own offset within it.
@@ -397,7 +397,7 @@ def place(xy_local: np.ndarray, labels: list[str],
         local = xy_local[mask] - xy_local[mask].mean(axis=0)
         local = _fit_unit(local)
 
-        if tangents is None or along_key is None:
+        if arc is None or along_key is None:
             out[mask] = centre + local * radii[name] * 0.92
             continue
 
@@ -419,7 +419,15 @@ def place(xy_local: np.ndarray, labels: list[str],
         # many works sit near that date, so the ribbon swells where the
         # collection is thick — an outline that reports something rather
         # than one that has been roughened to look organic.
-        u = tangents[name]
+        # Polar, not Cartesian. A band laid along a straight tangent
+        # overshoots the circle at both ends, and since neighbouring
+        # centuries point in different directions those overshoots became
+        # the limbs sticking out of the ribbon. Placing works at an angle
+        # and a radius instead makes every band a segment of one circle,
+        # so they meet each other smoothly.
+        theta_c = arc["theta"][name]
+        arc_r = arc["radius"]
+        u = np.array([np.cos(theta_c), np.sin(theta_c)])
         perp = np.array([-u[1], u[0]])
         keys = along_key[mask].astype(np.float64)
         order = np.argsort(keys, kind="stable")
@@ -487,9 +495,12 @@ def place(xy_local: np.ndarray, labels: list[str],
             if extent > room / 2:
                 across[members] *= (room / 2) / extent
 
-        out[mask] = (centre
-                     + np.outer(along * radii[name], u)
-                     + np.outer(across * radii[name] * ARC_BAND, perp))
+        # Angle swept by this century, from its arc-length and the radius.
+        half_angle = radii[name] / max(arc_r, 1e-9)
+        theta = theta_c + along * half_angle
+        radial = arc_r + across * radii[name] * ARC_BAND
+        out[mask] = np.stack([radial * np.sin(theta),
+                              -radial * np.cos(theta)], axis=1)
     return out
 
 
@@ -636,12 +647,12 @@ def build(vecs: np.ndarray, works: list[dict], facet: str) -> tuple:
         sizes[l] = sizes.get(l, 0) + 1
 
     mds = region_centres(vecs, labels)
-    tangents = None
+    arc = None
     along_key = None
     if facet in ARC_FACETS:
         # No packing pass: the arc already spaces them, and packing was
         # what displaced regions and muddied the axis.
-        centres, radii, tangents = arc_centres(
+        centres, radii, arc = arc_centres(
             mds, sizes, earliest_first=sorted(sizes, key=_period_sort_key))
         along_key = np.array([w.get("my", 0) for w in works], dtype=np.float64)
     else:
@@ -658,7 +669,7 @@ def build(vecs: np.ndarray, works: list[dict], facet: str) -> tuple:
     # during relaxation as it does to the client. Normalizing afterwards
     # rescales every distance and silently undoes the spacing just applied.
     pos, centres, radii = to_unit(
-        place(xy_local, labels, centres, radii, tangents, along_key,
+        place(xy_local, labels, centres, radii, arc, along_key,
               work_radius(len(labels))),
         centres, radii)
     pos = relax(pos, radius=work_radius(len(labels)),
