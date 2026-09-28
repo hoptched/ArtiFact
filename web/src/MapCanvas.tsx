@@ -112,6 +112,36 @@ export function MapCanvas({
     return out;
   }, [layouts]);
 
+  // Where the whole of *this* facet sits. Fitting to a fixed unit square
+  // put the timeline near the top of the screen and small: it is a ribbon
+  // about a tenth as tall as it is wide, so most of that square is empty.
+  // Framing the works' own bounds centres whatever the facet actually
+  // draws, and fills the viewport with it.
+  const homeView = useCallback((rect: DOMRect, pts: Float32Array) => {
+    const fallback = {
+      x: 0.5, y: 0.5, scale: Math.min(rect.width, rect.height) * 0.92,
+    };
+    if (pts.length === 0) return fallback;
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (let i = 0; i < pts.length; i += 2) {
+      if (pts[i] < x0) x0 = pts[i];
+      if (pts[i] > x1) x1 = pts[i];
+      if (pts[i + 1] < y0) y0 = pts[i + 1];
+      if (pts[i + 1] > y1) y1 = pts[i + 1];
+    }
+    // The bounds are tile centres, so leave a tile's width of air around
+    // them or the outermost row is cut in half by the edge.
+    const pad = (layouts.facets[facet].work_radius ?? layouts.work_radius) * 2;
+    const spanX = x1 - x0 + pad * 2;
+    const spanY = y1 - y0 + pad * 2;
+    if (!(spanX > 0) || !(spanY > 0)) return fallback;
+    return {
+      x: (x0 + x1) / 2,
+      y: (y0 + y1) / 2,
+      scale: Math.min(rect.width / spanX, rect.height / spanY) * 0.92,
+    };
+  }, [layouts, facet]);
+
   useEffect(() => {
     const target = flatten(facet);
     if (posRef.current.length === 0) {
@@ -129,25 +159,23 @@ export function MapCanvas({
     // unfamiliar part of a map that has changed under you.
     const canvas = canvasRef.current;
     if (canvas) {
-      const rect = canvas.getBoundingClientRect();
       flyRef.current = {
         from: { ...viewRef.current },
-        to: { x: 0.5, y: 0.5, scale: Math.min(rect.width, rect.height) * 0.92 },
+        to: homeView(canvas.getBoundingClientRect(), target),
         start: performance.now(),
         ms: ANIM_MS,
       };
     }
-  }, [facet, flatten]);
+  }, [facet, flatten, homeView]);
 
   // Fit the map to the viewport once, and again whenever it resizes.
   const fit = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    viewRef.current.scale = Math.min(rect.width, rect.height) * 0.92;
-    viewRef.current.x = 0.5;
-    viewRef.current.y = 0.5;
-  }, []);
+    Object.assign(
+      viewRef.current, homeView(canvas.getBoundingClientRect(), flatten(facet)),
+    );
+  }, [facet, flatten, homeView]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -546,9 +574,12 @@ export function MapCanvas({
       // it needs a stronger factor to feel like the same gesture.
       const k = e.ctrlKey ? 0.012 : 0.0016;
       const next = view.scale * Math.exp(-e.deltaY * k);
-      view.scale = Math.min(
-        Math.max(next, Math.min(rect.width, rect.height) * 0.5), 260000,
-      );
+      // The fitted view is the floor. Zooming out past the point where the
+      // whole facet is on screen only shrinks it into the middle of an
+      // empty canvas, and for the timeline — a ribbon a tenth as tall as
+      // it is wide — that happened almost immediately.
+      const floor = homeView(rect, flatten(facet)).scale;
+      view.scale = Math.min(Math.max(next, floor), 260000);
       const after = at(e.clientX, e.clientY);
       view.x += before.x - after.x;
       view.y += before.y - after.y;
@@ -556,7 +587,7 @@ export function MapCanvas({
 
     canvas.addEventListener("wheel", onWheel, { passive: false });
     return () => canvas.removeEventListener("wheel", onWheel);
-  }, []);
+  }, [facet, flatten, homeView]);
 
   const onPointerDown = (e: React.PointerEvent) => {
     (e.target as HTMLElement).setPointerCapture(e.pointerId);

@@ -250,9 +250,13 @@ def region_centres(vecs: np.ndarray, labels: list[str]) -> dict[str, np.ndarray]
 # along an arc instead of freely in the plane.
 ARC_FACETS = {"period"}
 ARC_SWEEP = 1.5 * np.pi     # 270 degrees, so the two ends never meet
-# Bins are drawn well inside one another, so a century boundary reads as a
-# transition rather than a seam.
-ARC_OVERLAP = 0.58
+# Bins run end to end. Drawing them inside one another did soften the
+# boundary, but it also doubled the works wherever two centuries lapped,
+# so the one stretch with no neighbour over it — the middle of the 19th,
+# the longest bin — sat at half the density of everything else and read
+# as a waist. The join is smooth without the overlap because relaxation
+# runs across the whole ribbon, not per bin.
+ARC_OVERLAP = 1.0
 # How wide a bin is across the arc, as a fraction of its radius. Narrow,
 # because the arc is the axis that carries meaning here and a wide band
 # just thins the works out across space that says nothing.
@@ -261,12 +265,13 @@ ARC_BAND = 0.34
 # century its own height — radius times ARC_BAND, and radius followed the
 # square root of its size — meant the band stepped at every boundary, and
 # those steps read as cracks along the ribbon.
-TIMELINE_LENGTH = 1.0 / (2 * 0.58)
+TIMELINE_LENGTH = 1.0 / (2 * ARC_OVERLAP)
 TIMELINE_HEIGHT = 0.11
 # How much of the along-arc position is the date itself rather than its
 # rank. All date crowds the busy years; all rank spaces everything alike
-# and flattens the century into a slab.
-ARC_DATE_WEIGHT = 0.28
+# and flattens the century into a slab. Kept low: date crowding was the
+# rest of the uneven density once the overlap was gone.
+ARC_DATE_WEIGHT = 0.10
 # Rounds of relax-then-put-back. More rounds hold the band more
 # tightly; each one costs a fraction of the relaxation budget.
 ARC_CONSTRAIN_ROUNDS = 8
