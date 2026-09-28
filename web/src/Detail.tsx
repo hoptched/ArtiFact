@@ -82,6 +82,9 @@ export function Detail({
         {work.type && (<><dt>Type</dt><dd>{work.type}</dd></>)}
       </dl>
 
+      {/* Neighbours load after the map, so this is briefly absent rather
+          than a heading over an empty row. */}
+      {similar.length > 0 && <>
       <h3>Visually similar</h3>
       <div className="similar">
         {similar.map((id) => {
@@ -104,6 +107,7 @@ export function Detail({
         Neighbours come from image similarity alone — no title, date or place
         was used to find them.
       </p>
+      </>}
     </aside>
   );
 }

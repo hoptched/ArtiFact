@@ -38,7 +38,7 @@ export function useBundle() {
       try {
         // works and layouts are all the map needs to draw; the atlas
         // sheets arrive after and simply upgrade colour cells to
-        // thumbnails, so nothing waits on 2.7 MB of JPEG.
+        // thumbnails, so nothing waits on 24 MB of JPEG.
         const [works, layouts, facets, atlasMeta] = await Promise.all([
           json<Work[]>("data/works.json"),
           json<import("./types").Layouts>("data/layouts.json"),
@@ -46,10 +46,26 @@ export function useBundle() {
           json<AtlasMeta>("atlas/atlas.json"),
         ]);
         if (cancelled) return;
-        const neighbors = await json<Record<string, number[]>>("data/neighbors.json");
+
+        // Mutated in place as sheets arrive, and never replaced. The draw
+        // loop closes over this array and reads it fresh every frame, so
+        // a sheet shows up on the next frame without a re-render. Handing
+        // React a new array per sheet — which is what this did — meant 25
+        // state updates, and since `sheets` is a dependency of the effect
+        // that owns the render loop, 25 teardowns and restarts of it
+        // during the one moment the map is busiest.
         const sheets: HTMLImageElement[] = [];
-        setBundle({ works, layouts, facets, neighbors, atlasMeta, sheets,
+        setBundle({ works, layouts, facets, neighbors: {}, atlasMeta, sheets,
                     hires: null });
+
+        // Only read when a detail panel opens, which cannot happen before
+        // there is a map to click on. Awaiting it here put 3.5 MB of JSON
+        // — fetch plus parse — in front of the first frame.
+        json<Record<string, number[]>>("data/neighbors.json")
+          .then((neighbors) => {
+            if (!cancelled) setBundle((b) => (b ? { ...b, neighbors } : b));
+          })
+          .catch(() => { /* similar works stay empty */ });
 
         // Optional: the map works without it, just softer when zoomed in.
         Promise.all([
@@ -63,14 +79,23 @@ export function useBundle() {
           })
           .catch(() => { /* no high-resolution atlas built yet */ });
 
-        for (let s = 0; s < atlasMeta.sheets; s++) {
-          const img = await loadImage(
-            `${base}atlas/atlas_${String(s).padStart(3, "0")}.jpg`,
-          );
-          if (cancelled) return;
-          sheets[s] = img;
-          setBundle((b) => (b ? { ...b, sheets: [...sheets] } : b));
-        }
+        // A few at a time rather than one after another. These were
+        // awaited in sequence, so the whole atlas cost 25 round trips
+        // end to end when the browser will gladly run six at once.
+        let next = 0;
+        const worker = async () => {
+          for (let s = next++; s < atlasMeta.sheets; s = next++) {
+            if (cancelled) return;
+            try {
+              sheets[s] = await loadImage(
+                `${base}atlas/atlas_${String(s).padStart(3, "0")}.jpg`,
+              );
+            } catch { /* one missing sheet leaves colour cells there */ }
+          }
+        };
+        await Promise.all(
+          Array.from({ length: Math.min(6, atlasMeta.sheets) }, worker),
+        );
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : String(e));
       }
