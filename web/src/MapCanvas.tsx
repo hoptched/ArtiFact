@@ -177,30 +177,33 @@ export function MapCanvas({
   // about a tenth as tall as it is wide, so most of that square is empty.
   // Framing the works' own bounds centres whatever the facet actually
   // draws, and fills the viewport with it.
-  const homeView = useCallback((rect: DOMRect, pts: Float32Array) => {
-    const fallback = {
-      x: 0.5, y: 0.5, scale: Math.min(rect.width, rect.height) * 0.92,
-    };
-    if (pts.length === 0) return fallback;
-    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-    for (let i = 0; i < pts.length; i += 2) {
-      if (pts[i] < x0) x0 = pts[i];
-      if (pts[i] > x1) x1 = pts[i];
-      if (pts[i + 1] < y0) y0 = pts[i + 1];
-      if (pts[i + 1] > y1) y1 = pts[i + 1];
+  const homeView = useCallback((rect: DOMRect) => {
+    const g = gridIndex;
+    if (!g) {
+      return { x: 0.5, y: 0.5, scale: Math.min(rect.width, rect.height) * 0.92 };
     }
+    // Read off the index, which measured these bounds once when it was
+    // built. This used to flatten the layout and scan all 25,515 works
+    // on the spot — and one of its callers is the wheel handler, which
+    // fires faster than frames do, so zooming rebuilt a 51,030-element
+    // array and swept it several times per frame to arrive at a number
+    // that cannot change until the facet does.
+    const x0 = g.x0, x1 = g.x0 + g.cw * g.nx;
+    const y0 = g.y0, y1 = g.y0 + g.ch * g.ny;
     // The bounds are tile centres, so leave a tile's width of air around
     // them or the outermost row is cut in half by the edge.
     const pad = (layouts.facets[facet].work_radius ?? layouts.work_radius) * 2;
     const spanX = x1 - x0 + pad * 2;
     const spanY = y1 - y0 + pad * 2;
-    if (!(spanX > 0) || !(spanY > 0)) return fallback;
+    if (!(spanX > 0) || !(spanY > 0)) {
+      return { x: 0.5, y: 0.5, scale: Math.min(rect.width, rect.height) * 0.92 };
+    }
     return {
       x: (x0 + x1) / 2,
       y: (y0 + y1) / 2,
       scale: Math.min(rect.width / spanX, rect.height / spanY) * 0.92,
     };
-  }, [layouts, facet]);
+  }, [layouts, facet, gridIndex]);
 
   useEffect(() => {
     const target = flatten(facet);
@@ -221,7 +224,7 @@ export function MapCanvas({
     if (canvas) {
       flyRef.current = {
         from: { ...viewRef.current },
-        to: homeView(canvas.getBoundingClientRect(), target),
+        to: homeView(canvas.getBoundingClientRect()),
         start: performance.now(),
         ms: ANIM_MS,
       };
@@ -232,10 +235,8 @@ export function MapCanvas({
   const fit = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    Object.assign(
-      viewRef.current, homeView(canvas.getBoundingClientRect(), flatten(facet)),
-    );
-  }, [facet, flatten, homeView]);
+    Object.assign(viewRef.current, homeView(canvas.getBoundingClientRect()));
+  }, [homeView]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -678,7 +679,7 @@ export function MapCanvas({
       // whole facet is on screen only shrinks it into the middle of an
       // empty canvas, and for the timeline — a ribbon a tenth as tall as
       // it is wide — that happened almost immediately.
-      const floor = homeView(rect, flatten(facet)).scale;
+      const floor = homeView(rect).scale;
       view.scale = Math.min(Math.max(next, floor), 260000);
       const after = at(e.clientX, e.clientY);
       view.x += before.x - after.x;
@@ -687,7 +688,7 @@ export function MapCanvas({
 
     canvas.addEventListener("wheel", onWheel, { passive: false });
     return () => canvas.removeEventListener("wheel", onWheel);
-  }, [facet, flatten, homeView]);
+  }, [homeView]);
 
   const onPointerDown = (e: React.PointerEvent) => {
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
