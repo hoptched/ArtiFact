@@ -13,6 +13,10 @@ interface View { x: number; y: number; scale: number }
 const THUMB_MIN_PX = 3.5;
 /** Tile size in the reduced atlas: a quarter of the 64px cell. */
 const MIP_TILE = 16;
+/** How small the selected work is allowed to get, in CSS pixels. Zoomed
+ *  out it is one speck among twenty thousand, and the thing you just
+ *  chose should not be the hardest thing on the map to find. */
+const SELECTED_MIN_PX = 26;
 // Below this many CSS pixels a tile is too small to aim at, so a click
 // inside a region means the region rather than whichever work happened to
 // be nearest the cursor.
@@ -128,6 +132,10 @@ export function MapCanvas({
   // Screen rectangle of the uploaded picture, written each frame so a
   // click can be tested against it before the nearest-work search.
   const pinRectRef = useRef<
+    { x: number; y: number; w: number; h: number } | null>(null);
+  // Likewise the selected work, which is held at a legible size however
+  // far out you are, so it stays as clickable as it is visible.
+  const selRectRef = useRef<
     { x: number; y: number; w: number; h: number } | null>(null);
   const flyRef = useRef<
     { from: View; to: View; start: number; ms: number } | null>(null);
@@ -557,13 +565,64 @@ export function MapCanvas({
       if (!pin) pinRectRef.current = null;
 
       const highlight = selectedRef.current;
+      selRectRef.current = null;
       if (highlight !== null) {
         const px = (pos[highlight * 2] - vx) * s + cx;
         const py = (pos[highlight * 2 + 1] - vy) * s + cy;
-        const r = Math.max(size * 0.95, 9 * dpr);
-        ctx.strokeStyle = "#f5c451";
-        ctx.lineWidth = 2 * dpr;
-        ctx.strokeRect(px - r, py - r, r * 2, r * 2);
+        // Its own size, or a floor — whichever is larger. Zoomed in it is
+        // simply the tile the draw above already placed; zoomed out it is
+        // held at the floor so it does not shrink into the field.
+        const box = Math.max(size, SELECTED_MIN_PX * dpr);
+        const ar = works[highlight].ar ?? 1;
+        const bw = ar >= 1 ? box : box * ar;
+        const bh = ar >= 1 ? box / ar : box;
+        selRectRef.current = { x: px, y: py, w: bw, h: bh };
+
+        // A glow rather than a box, and it has to be hollow: the work
+        // sits inside it and a filled blur would simply cover it. So the
+        // shape that casts the shadow is an outline, and it is drawn far
+        // off-canvas with the shadow offset back by the same amount —
+        // only the shadow lands, never the shape. Three passes, because
+        // one is too faint to find against the tiles. The outline sits
+        // slightly proud of the work so the light falls outside it.
+        const OFF = 1e5;
+        ctx.save();
+        ctx.shadowColor = "rgba(245,196,81,0.9)";
+        ctx.shadowBlur = 12 * dpr;
+        ctx.shadowOffsetX = OFF;
+        ctx.strokeStyle = "#000";
+        ctx.lineWidth = 3 * dpr;
+        const gap = 2 * dpr;
+        for (let pass = 0; pass < 3; pass++) {
+          ctx.strokeRect(px - bw / 2 - gap - OFF, py - bh / 2 - gap,
+                         bw + gap * 2, bh + gap * 2);
+        }
+        ctx.restore();
+
+        // Zoomed out the tile underneath is a speck, so draw the work
+        // again at the floor size. Close in the tile is already there at
+        // the best resolution loaded, and redrawing it from the atlas
+        // would only make it blurrier.
+        if (box > size) {
+          ctx.imageSmoothingEnabled = true;
+          const si = (highlight / per_sheet) | 0;
+          const sh = sheets[si];
+          if (sh) {
+            const within = highlight % per_sheet;
+            const iw = ar >= 1 ? tile : tile * ar;
+            const ih = ar >= 1 ? tile / ar : tile;
+            ctx.drawImage(
+              sh,
+              (within % grid) * tile + (tile - iw) / 2,
+              ((within / grid) | 0) * tile + (tile - ih) / 2,
+              iw, ih,
+              px - bw / 2, py - bh / 2, bw, bh,
+            );
+          } else {
+            ctx.fillStyle = works[highlight].k ?? "#3a3a3f";
+            ctx.fillRect(px - bw / 2, py - bh / 2, bw, bh);
+          }
+        }
       }
 
       // Region names, except where the rules already name the axis — on
@@ -713,6 +772,24 @@ export function MapCanvas({
       if (Math.abs(px - rect.x) <= rect.w / 2
           && Math.abs(py - rect.y) <= rect.h / 2) {
         onOpenPin();
+        return;
+      }
+    }
+
+    // The selected work is held at a legible size when the tiles around
+    // it are specks, so it has to be hit-tested at that size too —
+    // otherwise it is drawn where a click cannot reach it, and zoomed out
+    // the click would go to the region instead.
+    const sel = selRectRef.current;
+    if (sel && selected !== null) {
+      const canvas = canvasRef.current!;
+      const box = canvas.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const px = (e.clientX - box.left) * dpr;
+      const py = (e.clientY - box.top) * dpr;
+      if (Math.abs(px - sel.x) <= sel.w / 2
+          && Math.abs(py - sel.y) <= sel.h / 2) {
+        onSelect(selected);
         return;
       }
     }
