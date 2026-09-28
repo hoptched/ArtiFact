@@ -211,6 +211,10 @@ ARC_BAND = 0.34
 # rank. All date crowds the busy years; all rank spaces everything alike
 # and flattens the century into a slab.
 ARC_DATE_WEIGHT = 0.55
+# Fraction of a century's works forming the neighbourhood a work is
+# ranked against. Small enough that the band's width tracks local
+# density, large enough that the rank is not noise.
+ARC_WINDOW = 0.015
 
 
 def _period_sort_key(label: str) -> int:
@@ -396,30 +400,67 @@ def place(xy_local: np.ndarray, labels: list[str],
             out[mask] = centre + local * radii[name] * 0.92
             continue
 
-        # Along the arc, the date itself rather than its rank. Rank
-        # spaces every work equally, which erases the fact that the
-        # collection is not evenly spread through a century — and two
-        # uniform axes draw a rectangle, which is what this became.
-        # Blended with rank so a year everything is dated to does not
-        # collapse into a single column.
+        # Along the arc, the date. Across it, the work's rank among its
+        # own date-neighbours — so the two axes are not independent, and
+        # the band can have a shape.
+        #
+        # This is the fourth attempt and the first that is not a tweak.
+        # Raw embedding offsets gave wisps; a uniform rank gave a slab; a
+        # tapered rank gave a slab with softer density. All three computed
+        # `across` over the whole century at once, independent of `along`,
+        # and two independent distributions draw a rectangle however their
+        # densities are shaped. Measured on the 19th century: half-width
+        # varied 1.14x end to end and |across| correlated with along at
+        # -0.066, which is the arithmetic of a slab.
+        #
+        # Ranking within a sliding window of date-neighbours couples them.
+        # The band's half-width at a date follows the square root of how
+        # many works sit near that date, so the ribbon swells where the
+        # collection is thick — an outline that reports something rather
+        # than one that has been roughened to look organic.
         u = tangents[name]
         perp = np.array([-u[1], u[0]])
         keys = along_key[mask].astype(np.float64)
-        rank = np.argsort(np.argsort(keys)).astype(np.float64)
-        rank = rank / max(len(rank) - 1, 1)
-        lo, hi = keys.min(), keys.max()
-        bydate = (keys - lo) / max(hi - lo, 1e-9)
-        along = ((ARC_DATE_WEIGHT * bydate
-                  + (1 - ARC_DATE_WEIGHT) * rank) - 0.5) * 2.0
+        order = np.argsort(keys, kind="stable")
+        n = len(order)
 
-        # Across the arc, rank through a taper. Uniform gives a slab with
-        # a hard edge; a sine puts most works near the spine and thins
-        # towards the margins, so the band reads as a ribbon and fades out
-        # instead of stopping.
-        across_raw = local @ perp
-        across_rank = np.argsort(np.argsort(across_raw)).astype(np.float64)
-        across_u = across_rank / max(len(across_rank) - 1, 1)
-        across = np.sin(np.pi * (across_u - 0.5)) * 1.0
+        # Position along: the date, smoothed by blending with rank, so a
+        # year everything is dated to does not become a column.
+        rank_pos = np.empty(n)
+        rank_pos[order] = np.arange(n) / max(n - 1, 1)
+        lo, hi = keys.min(), keys.max()
+        by_date = (keys - lo) / max(hi - lo, 1e-9)
+        along = ((ARC_DATE_WEIGHT * by_date
+                  + (1 - ARC_DATE_WEIGHT) * rank_pos) - 0.5) * 2.0
+
+        # Local density: works within a window of dates either side.
+        window = max(int(n * ARC_WINDOW), 12)
+        half = window // 2
+        idx_in_order = np.empty(n, dtype=np.int64)
+        idx_in_order[order] = np.arange(n)
+        starts = np.clip(idx_in_order - half, 0, max(n - window, 0))
+        span = np.maximum(keys[order][np.clip(starts + window - 1, 0, n - 1)]
+                          - keys[order][starts], 1e-6)
+        density = float(window) / span                 # works per year, locally
+        # Linear in density, not its square root: the root damped the
+        # signal so far that the band still read as a slab (1.85x end
+        # to end against the 2x this needed to clear).
+        width = density / np.median(density)
+        width = np.clip(width, 0.30, 3.2)              # indexed in date order
+
+        # Position across: rank within the window, centred, scaled by that
+        # local width — so the edge follows the data instead of the frame.
+        proj = local @ perp                     # how far off-spine each work is
+        proj_sorted = proj[order]               # walked in date order
+        across_sorted = np.empty(n)
+        for k in range(n):
+            a = min(max(k - half, 0), max(n - window, 0))
+            b = min(a + window, n)
+            neighbourhood = proj_sorted[a:b]
+            across_sorted[k] = (np.count_nonzero(neighbourhood < proj_sorted[k])
+                                / max(len(neighbourhood) - 1, 1) - 0.5) * 2.0
+        across = np.empty(n)
+        across[order] = across_sorted * width[order]
 
         out[mask] = (centre
                      + np.outer(along * radii[name], u)
