@@ -210,7 +210,10 @@ ARC_BAND = 0.34
 # How much of the along-arc position is the date itself rather than its
 # rank. All date crowds the busy years; all rank spaces everything alike
 # and flattens the century into a slab.
-ARC_DATE_WEIGHT = 0.55
+ARC_DATE_WEIGHT = 0.28
+# Rounds of relax-then-put-back. More rounds hold the band more
+# tightly; each one costs a fraction of the relaxation budget.
+ARC_CONSTRAIN_ROUNDS = 8
 # Fraction of a century's works forming the neighbourhood a work is
 # ranked against. Small enough that the band's width tracks local
 # density, large enough that the rank is not noise.
@@ -495,6 +498,14 @@ def place(xy_local: np.ndarray, labels: list[str],
             if extent > room / 2:
                 across[members] *= (room / 2) / extent
 
+        # And nothing leaves the band. A date with 437 works needs more
+        # room than the band is thick, and given a free radial axis it
+        # took it — the biggest tied dates reached 1.2 to 1.5 times the
+        # thickness and their blobs read as bumps on the ribbon's edge.
+        # Held to the band, the crowding resolves along the arc instead,
+        # where there is somewhere to go.
+        across = np.clip(across, -1.0, 1.0)
+
         # Angle swept by this century, from its arc-length and the radius.
         half_angle = radii[name] / max(arc_r, 1e-9)
         theta = theta_c + along * half_angle
@@ -668,11 +679,41 @@ def build(vecs: np.ndarray, works: list[dict], facet: str) -> tuple:
     # Normalize BEFORE relaxing, so the work radius means the same thing
     # during relaxation as it does to the client. Normalizing afterwards
     # rescales every distance and silently undoes the spacing just applied.
-    pos, centres, radii = to_unit(
-        place(xy_local, labels, centres, radii, arc, along_key,
-              work_radius(len(labels))),
-        centres, radii)
-    pos = relax(pos, radius=work_radius(len(labels)),
-                scale=footprint_scale(works))
+    placed = place(xy_local, labels, centres, radii, arc, along_key,
+                   work_radius(len(labels)))
+    wr = work_radius(len(labels))
+    fs = footprint_scale(works)
+
+    if arc is not None:
+        # Relax inside the band, not merely near it.
+        #
+        # Clamping the placement was not enough, because relaxation runs
+        # afterwards and knows nothing about where the band is: it pushed
+        # the biggest tied dates straight out, 437 works dated 1849
+        # reaching 1.4 times the band's thickness and reading as a bump.
+        # Stretching the radial axis to make radial moves expensive was
+        # worse — separations won in the stretched space are divided away
+        # coming back, so works ended up overlapping at 0.79 tile-widths.
+        #
+        # So: relax honestly in arc-length coordinates, then put anything
+        # that left the band back, and repeat. Each round the crowding has
+        # one less direction to escape in and resolves along the ribbon,
+        # which is the only place with room.
+        ring = arc["radius"]
+        band = np.array([radii[l] * ARC_BAND for l in labels])
+        rr = np.linalg.norm(placed, axis=1)
+        th = np.arctan2(placed[:, 0], -placed[:, 1])
+        warped = np.stack([th * ring, rr - ring], axis=1)
+        for _ in range(ARC_CONSTRAIN_ROUNDS):
+            warped = relax(warped, radius=wr, scale=fs,
+                           iters=RELAX_ITERS // ARC_CONSTRAIN_ROUNDS)
+            warped[:, 1] = np.clip(warped[:, 1], -band, band)
+        th = warped[:, 0] / ring
+        rr = ring + warped[:, 1]
+        placed = np.stack([rr * np.sin(th), -rr * np.cos(th)], axis=1)
+        pos, centres, radii = to_unit(placed, centres, radii)
+    else:
+        pos, centres, radii = to_unit(placed, centres, radii)
+        pos = relax(pos, radius=wr, scale=fs)
     pos, centres, radii = to_unit(pos, centres, radii)
     return pos, centres, radii, labels
