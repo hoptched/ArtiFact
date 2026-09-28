@@ -33,6 +33,8 @@ export interface Layouts {
   work_radius: number;
   facets: Record<Facet, {
     xy: [number, number][];
+    /** Tile radius this facet can carry; a ribbon differs from a disc. */
+    work_radius?: number;
     regions: Region[];
     region_of: string[];
   }>;

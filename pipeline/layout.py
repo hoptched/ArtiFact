@@ -43,6 +43,25 @@ def work_radius(n: int) -> float:
     return float(np.sqrt(PACKING * DISC_R ** 2 / max(n, 1)))
 
 
+def fitted_radius(pos: np.ndarray, nominal: float) -> float:
+    """The tile radius this layout can actually carry.
+
+    work_radius() assumes the works fill a disc, which they do when the
+    map is round. A left-to-right timeline is a ribbon ten times wider
+    than it is tall — an eighth of that area — so the same tiles crammed
+    into it overlapped at 0.82 of their own width. Reading the spacing off
+    the finished layout instead means the tile size follows whatever shape
+    the facet turned out to be.
+    """
+    from scipy.spatial import cKDTree
+
+    if len(pos) < 2:
+        return nominal
+    gaps = cKDTree(pos).query(pos, k=2)[0][:, 1]
+    # Half the typical gap, so neighbours touch rather than overlap.
+    return float(min(nominal, np.median(gaps) / 2))
+
+
 def footprint_scale(works: list[dict]) -> np.ndarray:
     """Each work's collision radius relative to the nominal one.
 
@@ -274,25 +293,22 @@ def arc_centres(mds: dict[str, np.ndarray], sizes: dict[str, int],
     total = sum(sizes.values())
     rad = {n: DISC_R * np.sqrt(sizes[n] / total) for n in names}
 
-    # Walk the arc. Regions are spaced at less than their own diameter so
-    # neighbouring bins interpenetrate rather than sitting as separate
-    # bubbles with a gap between them.
-    length = 2.0 * ARC_OVERLAP * sum(rad.values())
-    radius = length / ARC_SWEEP
+    # Walk left to right. A timeline read the way a timeline is read, and
+    # it retires the overshoot problem outright: every century shares one
+    # orientation now, so no band can leave the line its neighbour is on.
+    # Bins are spaced at less than their own width, so they interpenetrate
+    # rather than sitting as separate blocks.
     centres: dict[str, np.ndarray] = {}
-    tangents: dict[str, float] = {}
     travelled = 0.0
     for i in order:
         name = names[i]
         travelled += rad[name] * ARC_OVERLAP
-        theta = ARC_SWEEP * (travelled / length) - ARC_SWEEP / 2
-        centres[name] = np.array([radius * np.sin(theta),
-                                  -radius * np.cos(theta)])
-        # The angle itself, so works can be placed on the arc rather than
-        # on a line tangent to it.
-        tangents[name] = float(theta)
+        centres[name] = np.array([travelled, 0.0])
         travelled += rad[name] * ARC_OVERLAP
-    return centres, rad, {"theta": tangents, "radius": radius}
+
+    span = max(travelled, 1e-9)
+    centres = {n: np.array([c[0] - span / 2, 0.0]) for n, c in centres.items()}
+    return centres, rad, {"span": span}
 
 
 def pack_regions(centres: dict[str, np.ndarray], sizes: dict[str, int],
@@ -422,16 +438,11 @@ def place(xy_local: np.ndarray, labels: list[str],
         # many works sit near that date, so the ribbon swells where the
         # collection is thick — an outline that reports something rather
         # than one that has been roughened to look organic.
-        # Polar, not Cartesian. A band laid along a straight tangent
-        # overshoots the circle at both ends, and since neighbouring
-        # centuries point in different directions those overshoots became
-        # the limbs sticking out of the ribbon. Placing works at an angle
-        # and a radius instead makes every band a segment of one circle,
-        # so they meet each other smoothly.
-        theta_c = arc["theta"][name]
-        arc_r = arc["radius"]
-        u = np.array([np.cos(theta_c), np.sin(theta_c)])
-        perp = np.array([-u[1], u[0]])
+        # Along the timeline is x and across it is y, the same for every
+        # century — which is what keeps the bands flush with each other
+        # instead of each overshooting the next.
+        u = np.array([1.0, 0.0])
+        perp = np.array([0.0, 1.0])
         keys = along_key[mask].astype(np.float64)
         order = np.argsort(keys, kind="stable")
         n = len(order)
@@ -506,12 +517,9 @@ def place(xy_local: np.ndarray, labels: list[str],
         # where there is somewhere to go.
         across = np.clip(across, -1.0, 1.0)
 
-        # Angle swept by this century, from its arc-length and the radius.
-        half_angle = radii[name] / max(arc_r, 1e-9)
-        theta = theta_c + along * half_angle
-        radial = arc_r + across * radii[name] * ARC_BAND
-        out[mask] = np.stack([radial * np.sin(theta),
-                              -radial * np.cos(theta)], axis=1)
+        out[mask] = (centre
+                     + np.outer(along * radii[name], u)
+                     + np.outer(across * radii[name] * ARC_BAND, perp))
     return out
 
 
@@ -650,9 +658,10 @@ def build(vecs: np.ndarray, works: list[dict], facet: str) -> tuple:
             lo = p.min(axis=0)
             return (p - lo) / float((p.max(axis=0) - lo).max())
 
-        pos = relax(unit(xy_local), radius=work_radius(len(labels)),
-                    scale=footprint_scale(works))
-        return unit(pos), {}, {}, labels
+        pos = unit(relax(unit(xy_local), radius=work_radius(len(labels)),
+                         scale=footprint_scale(works)))
+        return pos, {}, {}, labels, fitted_radius(
+            pos, work_radius(len(labels)))
     sizes: dict[str, int] = {}
     for l in labels:
         sizes[l] = sizes.get(l, 0) + 1
@@ -699,21 +708,17 @@ def build(vecs: np.ndarray, works: list[dict], facet: str) -> tuple:
         # that left the band back, and repeat. Each round the crowding has
         # one less direction to escape in and resolves along the ribbon,
         # which is the only place with room.
-        ring = arc["radius"]
         band = np.array([radii[l] * ARC_BAND for l in labels])
-        rr = np.linalg.norm(placed, axis=1)
-        th = np.arctan2(placed[:, 0], -placed[:, 1])
-        warped = np.stack([th * ring, rr - ring], axis=1)
         for _ in range(ARC_CONSTRAIN_ROUNDS):
-            warped = relax(warped, radius=wr, scale=fs,
+            placed = relax(placed, radius=wr, scale=fs,
                            iters=RELAX_ITERS // ARC_CONSTRAIN_ROUNDS)
-            warped[:, 1] = np.clip(warped[:, 1], -band, band)
-        th = warped[:, 0] / ring
-        rr = ring + warped[:, 1]
-        placed = np.stack([rr * np.sin(th), -rr * np.cos(th)], axis=1)
+            placed[:, 1] = np.clip(placed[:, 1], -band, band)
         pos, centres, radii = to_unit(placed, centres, radii)
     else:
         pos, centres, radii = to_unit(placed, centres, radii)
         pos = relax(pos, radius=wr, scale=fs)
     pos, centres, radii = to_unit(pos, centres, radii)
-    return pos, centres, radii, labels
+    # The tile size this facet can actually carry, read off the finished
+    # layout rather than assumed from a disc.
+    tile = fitted_radius(pos, work_radius(len(labels)))
+    return pos, centres, radii, labels, tile

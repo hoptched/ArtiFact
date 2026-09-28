@@ -200,7 +200,7 @@ def main() -> None:
     # --- map layouts, one per facet --------------------------------------
     layouts = {}
     for facet in ("similarity", "period", "country", "style"):
-        pos, centres, radii, labels = layout.build(vecs, works, facet)
+        pos, centres, radii, labels, tile = layout.build(vecs, works, facet)
         sizes: dict[str, int] = {}
         for l in labels:
             sizes[l] = sizes.get(l, 0) + 1
@@ -223,6 +223,8 @@ def main() -> None:
                 for name in sorted(sizes, key=lambda k: -sizes[k])
                 if name in centres],
             "region_of": labels,
+            # Per facet: a ribbon carries a different tile size than a disc.
+            "work_radius": round(float(tile), 6),
         }
         drawn = sum(1 for n in sizes if n in centres)
         print(f"  layout {facet:<10} {drawn:>3} regions"

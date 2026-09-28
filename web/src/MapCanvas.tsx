@@ -93,7 +93,9 @@ export function MapCanvas({
     { from: View; to: View; start: number; ms: number } | null>(null);
 
   const { works, layouts, atlasMeta, sheets, facets, hires } = bundle;
-  const radius = layouts.work_radius;
+  // Per facet: a left-to-right timeline is a ribbon an eighth the area
+  // of the round layouts, so it carries a smaller tile.
+  const radius = layouts.facets[facet].work_radius ?? layouts.work_radius;
   const images = useMemo(() => new ImageCache(facets.iiif), [facets.iiif]);
   const hiAtlas = useMemo(
     () => (hires ? new HiResAtlas(import.meta.env.BASE_URL, hires.meta) : null),
