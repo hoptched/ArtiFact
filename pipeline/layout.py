@@ -383,7 +383,8 @@ def _fit_unit(local: np.ndarray) -> np.ndarray:
 def place(xy_local: np.ndarray, labels: list[str],
           centres: dict[str, np.ndarray], radii: dict[str, float],
           tangents: dict[str, np.ndarray] | None = None,
-          along_key: np.ndarray | None = None) -> np.ndarray:
+          along_key: np.ndarray | None = None,
+          tile_radius: float = 0.002) -> np.ndarray:
     """Work positions: region centre plus the work's own offset within it.
 
     The offset is the work's UMAP position, so visually similar works sit
@@ -446,7 +447,11 @@ def place(xy_local: np.ndarray, labels: list[str],
         # signal so far that the band still read as a slab (1.85x end
         # to end against the 2x this needed to clear).
         width = density / np.median(density)
-        width = np.clip(width, 0.30, 3.2)              # indexed in date order
+        # The upper bound barely matters now: capping how far a tied
+        # date may spread is the binding constraint, and that cap is a
+        # uniform-density rule, so it flattens the band on its own. Width
+        # variation sits near 1.4x whether this is 2.0 or 4.0.
+        width = np.clip(width, 0.30, 2.6)              # indexed in date order
 
         # Position across: rank within the window, centred, scaled by that
         # local width — so the edge follows the data instead of the frame.
@@ -461,6 +466,26 @@ def place(xy_local: np.ndarray, labels: list[str],
                                 / max(len(neighbourhood) - 1, 1) - 0.5) * 2.0
         across = np.empty(n)
         across[order] = across_sorted * width[order]
+
+        # A tied date must be a blob, not a spoke. 437 works are dated
+        # exactly 1849; they share an along-arc position, so spreading
+        # them across the full local width drew a line 39 times longer
+        # than it was wide, and with the density term widening the band
+        # it shot outside the region entirely — 2,135 works ended up past
+        # their own radius.
+        #
+        # A group of m tiles laid out squarely needs about sqrt(m)*2r on
+        # each side, so that is all the across-extent a tied date gets.
+        # Relaxation rounds the rest out.
+        span_unit = max(radii[name] * ARC_BAND, 1e-9)
+        uniq, inverse, counts = np.unique(keys, return_inverse=True,
+                                          return_counts=True)
+        for g in np.flatnonzero(counts > 1):
+            members = np.flatnonzero(inverse == g)
+            room = np.sqrt(len(members)) * 2.0 * tile_radius / span_unit
+            extent = np.abs(across[members]).max()
+            if extent > room / 2:
+                across[members] *= (room / 2) / extent
 
         out[mask] = (centre
                      + np.outer(along * radii[name], u)
@@ -633,7 +658,8 @@ def build(vecs: np.ndarray, works: list[dict], facet: str) -> tuple:
     # during relaxation as it does to the client. Normalizing afterwards
     # rescales every distance and silently undoes the spacing just applied.
     pos, centres, radii = to_unit(
-        place(xy_local, labels, centres, radii, tangents, along_key),
+        place(xy_local, labels, centres, radii, tangents, along_key,
+              work_radius(len(labels))),
         centres, radii)
     pos = relax(pos, radius=work_radius(len(labels)),
                 scale=footprint_scale(works))
