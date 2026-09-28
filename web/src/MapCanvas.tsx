@@ -14,6 +14,10 @@ const THUMB_MIN_PX = 3.5;
 // inside a region means the region rather than whichever work happened to
 // be nearest the cursor.
 const WORK_CLICK_MIN_PX = 13;
+// Period is a timeline, and its regions already read as one continuous
+// band running along the arc. Tinting each century made the sequence look
+// like seven separate things. It stays clickable, just uncoloured.
+const TINTED_FACETS = new Set<Facet>(["country", "style"]);
 const LABEL_MAX_SCALE = 4200;
 const ANIM_MS = 750;
 const FLY_MS = 900;
@@ -214,7 +218,8 @@ export function MapCanvas({
         { grow: 1.15, alpha: 0.3 },
         { grow: 1.24, alpha: 0.14 },
       ];
-      for (const region of layouts.facets[facet].regions) {
+      for (const region of
+           TINTED_FACETS.has(facet) ? layouts.facets[facet].regions : []) {
         const rx = (region.c[0] - vx) * s + cx;
         const ry = (region.c[1] - vy) * s + cy;
         const rr = region.r * s;

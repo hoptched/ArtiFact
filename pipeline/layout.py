@@ -33,7 +33,7 @@ DISC_R = 0.5
 # Fraction of the disc the works may occupy. Trades density against
 # overlap and against how faithfully region order survives: 0.20 gives a
 # denser map but chronology at 0.84, 0.08 gives 0.92 and a sparse one.
-PACKING = 0.12
+PACKING = 0.22
 RELAX_ITERS = 400
 RELAX_STEP = 0.5
 
@@ -41,6 +41,20 @@ RELAX_STEP = 0.5
 def work_radius(n: int) -> float:
     """Per-work radius that lets n works fill PACKING of the disc."""
     return float(np.sqrt(PACKING * DISC_R ** 2 / max(n, 1)))
+
+
+def footprint_scale(works: list[dict]) -> np.ndarray:
+    """Each work's collision radius relative to the nominal one.
+
+    A tile is drawn at its true aspect inside a square box, so a 1:3 print
+    covers a third of that box. Reserving the whole square for it spaced
+    the map out by the part of the box the picture never reaches. Scaling
+    by the square root of the fraction actually covered lets narrow works
+    sit closer, which is most of this corpus — prints are 64% of it.
+    """
+    ar = np.array([w.get("ar") or 1.0 for w in works], dtype=np.float64)
+    fill = np.minimum(ar, 1.0 / np.maximum(ar, 1e-6))
+    return np.sqrt(np.clip(fill, 0.25, 1.0))
 
 
 FALLBACK_REGIONS = {"Other Asia", "Other Europe", "Africa",
@@ -189,6 +203,10 @@ ARC_SWEEP = 1.5 * np.pi     # 270 degrees, so the two ends never meet
 # Bins are drawn well inside one another, so a century boundary reads as a
 # transition rather than a seam.
 ARC_OVERLAP = 0.58
+# How wide a bin is across the arc, as a fraction of its radius. Narrow,
+# because the arc is the axis that carries meaning here and a wide band
+# just thins the works out across space that says nothing.
+ARC_BAND = 0.30
 
 
 def _period_sort_key(label: str) -> int:
@@ -393,12 +411,12 @@ def place(xy_local: np.ndarray, labels: list[str],
         across = (across_rank / max(len(across_rank) - 1, 1) - 0.5) * 2.0
         out[mask] = (centre
                      + np.outer(along * radii[name], u)
-                     + np.outer(across * radii[name] * 0.62, perp))
+                     + np.outer(across * radii[name] * ARC_BAND, perp))
     return out
 
 
 def relax(pos: np.ndarray, radius: float, iters: int = RELAX_ITERS,
-          step: float = RELAX_STEP) -> np.ndarray:
+          step: float = RELAX_STEP, scale: np.ndarray | None = None) -> np.ndarray:
     """Push overlapping works apart so thumbnails stay readable.
 
     Region membership is already baked into the starting positions, so a
@@ -407,19 +425,33 @@ def relax(pos: np.ndarray, radius: float, iters: int = RELAX_ITERS,
     from scipy.spatial import cKDTree
 
     pos = pos.copy()
-    d = radius * 2
+    # Per-work radii, not one radius for everything. Tiles are drawn at
+    # their true aspect, so a 1:3 hanging scroll or print fills a third of
+    # the square that a uniform circle reserves for it — and prints are
+    # 64% of this corpus. Spacing them all as if they were square left the
+    # map looking sparse when the works were in fact touching; the gap was
+    # reserved space, not distance.
+    rad = np.full(len(pos), radius) if scale is None else radius * scale
+    largest = float(rad.max()) * 2
+
     for _ in range(iters):
         tree = cKDTree(pos)
-        pairs = tree.query_pairs(d, output_type="ndarray")
+        pairs = tree.query_pairs(largest, output_type="ndarray")
         if len(pairs) == 0:
             break
-        a, b = pos[pairs[:, 0]], pos[pairs[:, 1]]
-        delta = a - b
-        dist = np.linalg.norm(delta, axis=1, keepdims=True)
+        a, b = pairs[:, 0], pairs[:, 1]
+        want = rad[a] + rad[b]
+        delta = pos[a] - pos[b]
+        dist = np.linalg.norm(delta, axis=1)
         dist[dist == 0] = 1e-9
-        push = delta / dist * (d - dist) * step
-        np.add.at(pos, pairs[:, 0], push)
-        np.subtract.at(pos, pairs[:, 1], push)
+        touching = dist < want
+        if not touching.any():
+            break
+        a, b = a[touching], b[touching]
+        delta, dist, want = delta[touching], dist[touching], want[touching]
+        push = delta / dist[:, None] * (want - dist)[:, None] * step
+        np.add.at(pos, a, push)
+        np.subtract.at(pos, b, push)
     return pos
 
 
@@ -518,7 +550,8 @@ def build(vecs: np.ndarray, works: list[dict], facet: str) -> tuple:
             lo = p.min(axis=0)
             return (p - lo) / float((p.max(axis=0) - lo).max())
 
-        pos = relax(unit(xy_local), radius=work_radius(len(labels)))
+        pos = relax(unit(xy_local), radius=work_radius(len(labels)),
+                    scale=footprint_scale(works))
         return unit(pos), {}, {}, labels
     sizes: dict[str, int] = {}
     for l in labels:
@@ -549,6 +582,7 @@ def build(vecs: np.ndarray, works: list[dict], facet: str) -> tuple:
     pos, centres, radii = to_unit(
         place(xy_local, labels, centres, radii, tangents, along_key),
         centres, radii)
-    pos = relax(pos, radius=work_radius(len(labels)))
+    pos = relax(pos, radius=work_radius(len(labels)),
+                scale=footprint_scale(works))
     pos, centres, radii = to_unit(pos, centres, radii)
     return pos, centres, radii, labels
