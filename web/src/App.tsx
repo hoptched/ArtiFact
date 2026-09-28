@@ -9,13 +9,14 @@ import { useBundle } from "./useData";
 import type { Facet } from "./types";
 
 const facetNote: Record<Facet, string> = {
-  similarity: "Position is the image alone. Neighbours look alike.",
+  similarity: "Position is the image alone. Neighbours look alike, and "
+    + "there are no regions to click.",
   period: "A continuous timeline. Bins are ordered by how their works "
     + "look, not by date — that order turns out to be chronological — and "
     + "within each, works run oldest to newest along the arc.",
   country: "Regions are present-day countries, placed by how their works look.",
   style: "Regions are predicted styles, plus one for the works no "
-    + "style in the taxonomy fits.",
+    + "style in the taxonomy fits. Click a region to go there.",
 };
 
 const FACETS: { key: Facet; label: string }[] = [
@@ -35,7 +36,6 @@ export default function App() {
   const [pin, setPin] = useState<Pin | null>(null);
   const [mapPin, setMapPin] = useState<MapPin | null>(null);
   const [showOwn, setShowOwn] = useState(false);
-  const regions = bundle?.layouts.facets[facet].regions ?? [];
 
   const flyTo = useCallback(
     (x: number, y: number) => setFocus({ x, y, r: 0.06, key: Date.now() }), []);
@@ -83,26 +83,6 @@ export default function App() {
           <p className="hint">{facetNote[facet]}</p>
         </section>
 
-        {regions.length > 0 && (
-          <section className="regions">
-            <h2>Jump to</h2>
-            <ul>
-              {regions.map((r) => (
-                <li key={r.name}>
-                  <button
-                    onClick={() =>
-                      setFocus({ x: r.c[0], y: r.c[1], r: r.r, key: Date.now() })
-                    }
-                  >
-                    <span>{r.name}</span>
-                    <em>{r.n.toLocaleString()}</em>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-
         <Compare
           bundle={bundle}
           facet={facet}
@@ -128,6 +108,8 @@ export default function App() {
           focus={focus}
           pin={mapPin}
           onOpenPin={() => setShowOwn(true)}
+          onRegion={(x, y, r) =>
+            setFocus({ x, y, r: Math.max(r, 0.02), key: Date.now() })}
         />
       </div>
 

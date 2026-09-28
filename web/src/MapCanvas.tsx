@@ -14,6 +14,25 @@ const LABEL_MAX_SCALE = 4200;
 const ANIM_MS = 750;
 const FLY_MS = 900;
 
+/**
+ * A region's tint.
+ *
+ * Not a categorical palette: at 43 style regions, assigning identity by
+ * hue would mean cycling or generating colours, and no reader can tell 43
+ * hues apart anyway. Identity stays with the label, which every region
+ * already has.
+ *
+ * Instead the hue comes from where the region sits in the layout, which is
+ * a similarity projection — so regions that look alike are tinted alike,
+ * and the colour says something true. Lightness and chroma are constant,
+ * so no region reads as more important than another, and alpha is low
+ * enough that the pictures stay the brightest thing on screen.
+ */
+function regionTint(cx: number, cy: number, alpha: number) {
+  const hue = ((Math.atan2(cy - 0.5, cx - 0.5) * 180) / Math.PI + 360) % 360;
+  return `oklch(0.62 0.11 ${hue.toFixed(0)} / ${alpha})`;
+}
+
 const easeInOut = (t: number) =>
   t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
@@ -25,7 +44,7 @@ export interface MapPin {
 }
 
 export function MapCanvas({
-  bundle, facet, selected, onSelect, focus, pin, onOpenPin,
+  bundle, facet, selected, onSelect, focus, pin, onOpenPin, onRegion,
 }: {
   bundle: Bundle;
   facet: Facet;
@@ -34,6 +53,7 @@ export function MapCanvas({
   focus: Focus | null;
   pin: MapPin | null;
   onOpenPin: () => void;
+  onRegion: (x: number, y: number, r: number) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const viewRef = useRef<View>({ x: 0.5, y: 0.5, scale: 0 });
@@ -46,6 +66,11 @@ export function MapCanvas({
   const toRef = useRef<Float32Array>(new Float32Array(0));
   const animRef = useRef<{ start: number } | null>(null);
   const dragRef = useRef<{ x: number; y: number; moved: boolean } | null>(null);
+  // Screen geometry of each region, written while drawing so a click and a
+  // hover test exactly what is on screen.
+  const regionHitsRef = useRef<
+    { name: string; x: number; y: number; r: number; wx: number; wy: number }[]>([]);
+  const hoverRef = useRef<string | null>(null);
   // Screen rectangle of the uploaded picture, written each frame so a
   // click can be tested against it before the nearest-work search.
   const pinRectRef = useRef<
@@ -165,6 +190,27 @@ export function MapCanvas({
 
       ctx.fillStyle = "#0d0d0f";
       ctx.fillRect(0, 0, w, h);
+
+      // Region discs, under the tiles so the art is never tinted.
+      const regions = layouts.facets[facet].regions;
+      const hits: typeof regionHitsRef.current = [];
+      for (const region of regions) {
+        const rx = (region.c[0] - vx) * s + cx;
+        const ry = (region.c[1] - vy) * s + cy;
+        const rr = region.r * s;
+        if (rx + rr < 0 || ry + rr < 0 || rx - rr > w || ry - rr > h) continue;
+        hits.push({ name: region.name, x: rx, y: ry, r: rr,
+                    wx: region.c[0], wy: region.c[1] });
+        const on = hoverRef.current === region.name;
+        ctx.beginPath();
+        ctx.arc(rx, ry, rr, 0, Math.PI * 2);
+        ctx.fillStyle = regionTint(region.c[0], region.c[1], on ? 0.3 : 0.12);
+        ctx.fill();
+        ctx.lineWidth = (on ? 2 : 1) * dpr;
+        ctx.strokeStyle = regionTint(region.c[0], region.c[1], on ? 0.85 : 0.35);
+        ctx.stroke();
+      }
+      regionHitsRef.current = hits;
 
       const pos = posRef.current;
       const size = Math.max(1, radius * 2 * s);
@@ -445,7 +491,25 @@ export function MapCanvas({
 
   const onPointerMove = (e: React.PointerEvent) => {
     const drag = dragRef.current;
-    if (!drag) return;
+    if (!drag) {
+      // Smallest region under the cursor wins, so a small one nested
+      // against a large one is still reachable.
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const box = canvas.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const px = (e.clientX - box.left) * dpr, py = (e.clientY - box.top) * dpr;
+      let best: string | null = null, bestR = Infinity;
+      for (const hit of regionHitsRef.current) {
+        const d = Math.hypot(px - hit.x, py - hit.y);
+        if (d <= hit.r && hit.r < bestR) { bestR = hit.r; best = hit.name; }
+      }
+      if (best !== hoverRef.current) {
+        hoverRef.current = best;
+        canvas.style.cursor = best ? "pointer" : "grab";
+      }
+      return;
+    }
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
     if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
     const view = viewRef.current;
@@ -487,7 +551,26 @@ export function MapCanvas({
       const d = dx * dx + dy * dy;
       if (d < bestDist) { bestDist = d; best = i; }
     }
-    onSelect(best >= 0 ? best : null);
+    if (best >= 0) {
+      onSelect(best);
+      return;
+    }
+
+    // Empty space inside a region: go to the region instead of deselecting.
+    const canvas = canvasRef.current!;
+    const box = canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const px = (e.clientX - box.left) * dpr, py = (e.clientY - box.top) * dpr;
+    let pick: typeof regionHitsRef.current[0] | null = null;
+    for (const hit of regionHitsRef.current) {
+      const d = Math.hypot(px - hit.x, py - hit.y);
+      if (d <= hit.r && (!pick || hit.r < pick.r)) pick = hit;
+    }
+    if (pick) {
+      onRegion(pick.wx, pick.wy, pick.r / (viewRef.current.scale * dpr));
+      return;
+    }
+    onSelect(null);
   };
 
   return (

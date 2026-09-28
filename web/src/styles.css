@@ -111,6 +111,37 @@ body {
   line-height: 1.5;
 }
 
+.sidebar .reset {
+  background: var(--btn);
+  border: 1px solid var(--btn-line);
+  box-shadow: inset 0 1px 0 var(--btn-top);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 4px 11px;
+  border-radius: 4px;
+  cursor: pointer;
+  line-height: 1.5;
+}
+.switcher button:hover,
+.sidebar .reset:hover { background: var(--btn-hover); }
+
+/* Pressed, not coloured: the bar has no accent of its own. */
+.switcher button.on {
+  background: #2f2f31;
+  border-color: #262628;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-weight: 600;
+}
+
+.group .hint {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
 .regions {
   display: flex;
   flex-direction: column;
@@ -350,15 +381,6 @@ dd { margin: 0; font-size: 0.85rem; }
     max-height: 42%;
     padding: 14px 16px;
   }
-  /* Too little height here to scale into, so let it scroll instead of
-     shrinking the type past reading size. */
-  .regions ul {
-    container-type: normal;
-    overflow-y: auto;
-    display: block;
-  }
-  .regions li { display: block; }
-  .regions ul button { font-size: 0.82rem; padding: 4px 6px; }
 }
 
 /* The last thing worth keeping, so it is the first thing dropped when the
