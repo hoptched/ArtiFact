@@ -39,14 +39,16 @@ export class HiResAtlas {
     return this.ready.has(s) ? this.sheets.get(s)! : null;
   }
 
-  /** Start loading any wanted sheet that is missing, nearest need first. */
+  /** Start loading any wanted sheet that is missing, nearest need first.
+   *  Called every frame, so it walks the caller's set rather than copying
+   *  it into a second set and then an array. */
   pump(wanted: Iterable<number>) {
-    const want = [...new Set(wanted)].filter(
-      (s) => !this.ready.has(s) && !this.loading.has(s),
-    );
-    for (const s of want) {
-      if (this.loading.size >= this.maxInflight) break;
-      this.load(s);
+    if (this.loading.size < this.maxInflight) {
+      for (const s of wanted) {
+        if (this.ready.has(s) || this.loading.has(s)) continue;
+        this.load(s);
+        if (this.loading.size >= this.maxInflight) break;
+      }
     }
     this.evict();
   }
@@ -57,9 +59,18 @@ export class HiResAtlas {
     img.referrerPolicy = "no-referrer";
     const name = `${this.meta.prefix ?? "hires"}_${String(sheet).padStart(3, "0")}.jpg`;
     img.onload = () => {
-      this.loading.delete(sheet);
-      this.sheets.set(sheet, img);
-      this.ready.add(sheet);
+      // Ready means drawable, not merely arrived. onload fires when the
+      // bytes are in; the JPEG is turned into a bitmap lazily, on the
+      // first drawImage that needs it — on the main thread, inside a
+      // frame. At 1920x1920 that is a stall you can see, and crossing
+      // into this tier pulls several sheets at once, so zooming in
+      // hitched once per sheet. decode() does that work off the frame.
+      const show = () => {
+        this.loading.delete(sheet);
+        this.sheets.set(sheet, img);
+        this.ready.add(sheet);
+      };
+      img.decode().then(show, show);
     };
     img.onerror = () => { this.loading.delete(sheet); };
     img.src = `${this.base}atlas/${name}`;

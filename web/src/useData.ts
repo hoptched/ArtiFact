@@ -22,7 +22,9 @@ async function json<T>(path: string): Promise<T> {
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.onload = () => resolve(img);
+    // Resolved once it is decoded, not merely fetched, so the first frame
+    // that draws a sheet does not also have to decompress it.
+    img.onload = () => img.decode().then(() => resolve(img), () => resolve(img));
     img.onerror = () => reject(new Error(`failed to load ${src}`));
     img.src = src;
   });

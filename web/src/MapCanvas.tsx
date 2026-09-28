@@ -116,6 +116,7 @@ export function MapCanvas({
   const toRef = useRef<Float32Array>(new Float32Array(0));
   const animRef = useRef<{ start: number } | null>(null);
   const dragRef = useRef<{ x: number; y: number; moved: boolean } | null>(null);
+  const hiWantedRef = useRef<Set<number>>(new Set());
   // Which work wears the highlight. A ref rather than a dependency of the
   // render effect: selecting is the most common thing anyone does here,
   // and it changes one rectangle, not the loop that draws the map.
@@ -367,7 +368,9 @@ export function MapCanvas({
       const hiTile = hires?.meta.tile ?? 0;
       const wantHi = hires !== null && size >= tile * 0.9;
       const wantReal = size >= Math.max(TIER2_MIN_PX, hiTile * 0.9 || tile * 0.9);
-      const hiWanted = new Set<number>();
+      // Reused across frames rather than allocated each one.
+      const hiWanted = hiWantedRef.current;
+      hiWanted.clear();
       // Collected during the draw and requested after it, nearest to the
       // centre of the screen first, so what you are looking at arrives
       // before what is at the edge.

@@ -105,9 +105,16 @@ export class ImageCache {
     this.entries.set(key, entry);
     this.evict();
 
+    // Decoded before it is called ready, so the frame that first draws it
+    // is not the frame that has to turn the JPEG into pixels.
+    const settle = (entry: Entry, img: HTMLImageElement) => {
+      const show = () => { entry.ready = true; this.done(); };
+      img.decode().then(show, show);
+    };
+
     const start = () => {
       this.inflight++;
-      img.onload = () => { entry.ready = true; this.done(); };
+      img.onload = () => settle(entry, img);
       img.onerror = () => { this.entries.delete(key); this.done(); };
       img.src = url;
     };
@@ -130,7 +137,10 @@ export class ImageCache {
     const entry = this.entries.get(next.key);
     if (!entry) { this.done(); return; }
     this.inflight++;
-    entry.img.onload = () => { entry.ready = true; this.done(); };
+    entry.img.onload = () => {
+      const show = () => { entry.ready = true; this.done(); };
+      entry.img.decode().then(show, show);
+    };
     entry.img.onerror = () => { this.entries.delete(next.key); this.done(); };
     entry.img.src = next.url;
   }
