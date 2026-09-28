@@ -257,6 +257,12 @@ ARC_OVERLAP = 0.58
 # because the arc is the axis that carries meaning here and a wide band
 # just thins the works out across space that says nothing.
 ARC_BAND = 0.34
+# A timeline is a ribbon of one height, run end to end. Giving each
+# century its own height — radius times ARC_BAND, and radius followed the
+# square root of its size — meant the band stepped at every boundary, and
+# those steps read as cracks along the ribbon.
+TIMELINE_LENGTH = 1.0 / (2 * 0.58)
+TIMELINE_HEIGHT = 0.11
 # How much of the along-arc position is the date itself rather than its
 # rank. All date crowds the busy years; all rank spaces everything alike
 # and flattens the century into a slab.
@@ -322,7 +328,10 @@ def arc_centres(mds: dict[str, np.ndarray], sizes: dict[str, int],
 
     order = np.argsort(along)
     total = sum(sizes.values())
-    rad = {n: DISC_R * np.sqrt(sizes[n] / total) for n in names}
+    # Length proportional to count, not to its square root, because the
+    # ribbon's height is the same everywhere: a century twice as large
+    # needs twice the run to hold its works at the same density.
+    rad = {n: TIMELINE_LENGTH * sizes[n] / total for n in names}
 
     # Walk left to right. A timeline read the way a timeline is read, and
     # it retires the overshoot problem outright: every century shares one
@@ -339,7 +348,7 @@ def arc_centres(mds: dict[str, np.ndarray], sizes: dict[str, int],
 
     span = max(travelled, 1e-9)
     centres = {n: np.array([c[0] - span / 2, 0.0]) for n, c in centres.items()}
-    return centres, rad, {"span": span}
+    return centres, rad, {"span": span, "band": TIMELINE_HEIGHT / 2}
 
 
 def pack_regions(centres: dict[str, np.ndarray], sizes: dict[str, int],
@@ -550,7 +559,7 @@ def place(xy_local: np.ndarray, labels: list[str],
 
         out[mask] = (centre
                      + np.outer(along * radii[name], u)
-                     + np.outer(across * radii[name] * ARC_BAND, perp))
+                     + np.outer(across * arc["band"], perp))
     return out
 
 
@@ -762,7 +771,7 @@ def build(vecs: np.ndarray, works: list[dict], facet: str) -> tuple:
         # that left the band back, and repeat. Each round the crowding has
         # one less direction to escape in and resolves along the ribbon,
         # which is the only place with room.
-        band = np.array([radii[l] * ARC_BAND for l in labels])
+        band = np.full(len(labels), arc["band"])
         for _ in range(ARC_CONSTRAIN_ROUNDS):
             placed = relax(placed, radius=wr, scale=fs,
                            iters=RELAX_ITERS // ARC_CONSTRAIN_ROUNDS)
