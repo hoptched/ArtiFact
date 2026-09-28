@@ -39,6 +39,54 @@ function regionTint(hue: number, alpha: number) {
   return `oklch(0.66 0.13 ${hue.toFixed(0)} / ${alpha})`;
 }
 
+/** A uniform grid over the layout, so a frame can ask "what is in this
+ *  rectangle" instead of walking all 25,515 works. Stored the way a
+ *  sparse matrix is — a start offset per cell, and one flat array of work
+ *  indices — because 25k small arrays would cost more to chase than the
+ *  scan it replaces.
+ *
+ *  Cells are kept roughly square in map units rather than in grid units:
+ *  the timeline is ten times wider than it is tall, and a grid that
+ *  ignored that would put a whole column of the ribbon in one cell. */
+export interface Grid {
+  x0: number; y0: number; cw: number; ch: number;
+  nx: number; ny: number;
+  start: Int32Array; items: Int32Array;
+}
+
+function buildGrid(pts: Float32Array): Grid | null {
+  const n = pts.length / 2;
+  if (n === 0) return null;
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (let i = 0; i < pts.length; i += 2) {
+    if (pts[i] < x0) x0 = pts[i];
+    if (pts[i] > x1) x1 = pts[i];
+    if (pts[i + 1] < y0) y0 = pts[i + 1];
+    if (pts[i + 1] > y1) y1 = pts[i + 1];
+  }
+  const spanX = Math.max(x1 - x0, 1e-6), spanY = Math.max(y1 - y0, 1e-6);
+  // About two works per cell: enough that a query returns little waste,
+  // not so many cells that walking empty ones dominates.
+  const cells = Math.max(1, Math.round(n / 2));
+  const nx = Math.max(1, Math.round(Math.sqrt(cells * spanX / spanY)));
+  const ny = Math.max(1, Math.ceil(cells / nx));
+  const cw = spanX / nx, ch = spanY / ny;
+
+  const cellOf = (i: number) => {
+    const gx = Math.min(nx - 1, Math.max(0, ((pts[i * 2] - x0) / cw) | 0));
+    const gy = Math.min(ny - 1, Math.max(0, ((pts[i * 2 + 1] - y0) / ch) | 0));
+    return gy * nx + gx;
+  };
+
+  const start = new Int32Array(nx * ny + 1);
+  for (let i = 0; i < n; i++) start[cellOf(i) + 1]++;
+  for (let c = 0; c < nx * ny; c++) start[c + 1] += start[c];
+  const items = new Int32Array(n);
+  const cursor = start.slice(0, nx * ny);
+  for (let i = 0; i < n; i++) items[cursor[cellOf(i)]++] = i;
+  return { x0, y0, cw, ch, nx, ny, start, items };
+}
+
 /** Ray casting, in the map's own 0..1 space so no per-frame screen copy
  *  of the outline is needed. */
 function inside(poly: [number, number][], x: number, y: number) {
@@ -116,6 +164,13 @@ export function MapCanvas({
     }
     return out;
   }, [layouts]);
+
+  // Built for the facet's settled positions. While a facet change is
+  // animating the works are somewhere between two layouts, so the frame
+  // falls back to the full scan for those few hundred milliseconds
+  // rather than querying an index that no longer describes them.
+  const gridIndex = useMemo(
+    () => buildGrid(flatten(facet)), [flatten, facet]);
 
   // Where the whole of *this* facet sits. Fitting to a fixed unit square
   // put the timeline near the top of the screen and small: it is a ribbon
@@ -362,22 +417,22 @@ export function MapCanvas({
       // before what is at the edge.
       const missing: { id: string; d2: number }[] = [];
 
-      for (let i = 0; i < works.length; i++) {
+      const visit = (i: number) => {
         const px = (pos[i * 2] - vx) * s + cx;
         const py = (pos[i * 2 + 1] - vy) * s + cy;
         const onScreen =
           px >= -pad && py >= -pad && px <= w + pad && py <= h + pad;
         if (!onScreen) {
-          if (!wantReal) continue;
+          if (!wantReal) return;
           if (px < -prefetch || py < -prefetch ||
-              px > w + prefetch || py > h + prefetch) continue;
+              px > w + prefetch || py > h + prefetch) return;
           if (images.wants(works[i].img, size)) {
             const ox = px - cx, oy = py - cy;
             // Ranked behind everything on screen, so visible tiles never
             // wait on a neighbour you have not reached yet.
             missing.push({ id: works[i].img, d2: ox * ox + oy * oy + 1e9 });
           }
-          continue;
+          return;
         }
 
         // Every tier draws the work's true shape. `size` is the box it has
@@ -392,7 +447,7 @@ export function MapCanvas({
           const real = images.peek(works[i].img, size);
           if (real) {
             ctx.drawImage(real, px - hw, py - hh, tw, th);
-            continue;
+            return;
           }
           if (images.wants(works[i].img, size)) {
             const ox = px - cx, oy = py - cy;
@@ -416,7 +471,7 @@ export function MapCanvas({
               iw, ih,
               px - hw, py - hh, tw, th,
             );
-            continue;
+            return;
           }
         }
 
@@ -440,6 +495,31 @@ export function MapCanvas({
           ctx.fillStyle = works[i].k ?? "#3a3a3f";
           ctx.fillRect(px - hw, py - hh, tw, th);
         }
+      
+      };
+
+      // Only the works that could land in the frame. This walked all
+      // 25,515 every frame and culled inside the loop, so zooming in cost
+      // exactly as much as zooming out. While a facet change animates,
+      // positions are between two layouts and the index does not describe
+      // them, so those frames still scan.
+      const q = wantReal ? prefetch : pad;
+      const qx0 = (-q - cx) / s + vx, qx1 = (w + q - cx) / s + vx;
+      const qy0 = (-q - cy) / s + vy, qy1 = (h + q - cy) / s + vy;
+      if (gridIndex && !animRef.current) {
+        const g = gridIndex;
+        const lo = (v: number, o: number, c: number, n: number) =>
+          Math.min(n - 1, Math.max(0, Math.floor((v - o) / c)));
+        const gx0 = lo(qx0, g.x0, g.cw, g.nx), gx1 = lo(qx1, g.x0, g.cw, g.nx);
+        const gy0 = lo(qy0, g.y0, g.ch, g.ny), gy1 = lo(qy1, g.y0, g.ch, g.ny);
+        for (let gy = gy0; gy <= gy1; gy++) {
+          const row = gy * g.nx;
+          for (let c = row + gx0; c <= row + gx1; c++) {
+            for (let k = g.start[c]; k < g.start[c + 1]; k++) visit(g.items[k]);
+          }
+        }
+      } else {
+        for (let i = 0; i < works.length; i++) visit(i);
       }
 
       // Nearest first. Capped per frame so a fast pan does not enqueue a
