@@ -33,7 +33,7 @@ DISC_R = 0.5
 # Fraction of the disc the works may occupy. Trades density against
 # overlap and against how faithfully region order survives: 0.20 gives a
 # denser map but chronology at 0.84, 0.08 gives 0.92 and a sparse one.
-PACKING = 0.22
+PACKING = 0.30
 RELAX_ITERS = 400
 RELAX_STEP = 0.5
 
@@ -206,7 +206,11 @@ ARC_OVERLAP = 0.58
 # How wide a bin is across the arc, as a fraction of its radius. Narrow,
 # because the arc is the axis that carries meaning here and a wide band
 # just thins the works out across space that says nothing.
-ARC_BAND = 0.30
+ARC_BAND = 0.34
+# How much of the along-arc position is the date itself rather than its
+# rank. All date crowds the busy years; all rank spaces everything alike
+# and flattens the century into a slab.
+ARC_DATE_WEIGHT = 0.55
 
 
 def _period_sort_key(label: str) -> int:
@@ -392,23 +396,31 @@ def place(xy_local: np.ndarray, labels: list[str],
             out[mask] = centre + local * radii[name] * 0.92
             continue
 
-        # Along the arc: rank by date, so the works meeting at a seam are
-        # the ones whose dates meet. Across it: the embedding, unchanged.
-        # A bin's internal spread stops being an arbitrary crop of the
-        # UMAP plane and becomes the passage of time through that
-        # half-century.
+        # Along the arc, the date itself rather than its rank. Rank
+        # spaces every work equally, which erases the fact that the
+        # collection is not evenly spread through a century — and two
+        # uniform axes draw a rectangle, which is what this became.
+        # Blended with rank so a year everything is dated to does not
+        # collapse into a single column.
         u = tangents[name]
         perp = np.array([-u[1], u[0]])
-        rank = np.argsort(np.argsort(along_key[mask])).astype(np.float64)
-        along = (rank / max(len(rank) - 1, 1) - 0.5) * 2.0
-        # Across the arc, rank rather than raw offset. The embedding has
-        # long tails, and using them directly left wisps of visually
-        # unusual works trailing off a band that is otherwise dense —
-        # which reads as scatter in a facet organised purely by date.
-        # Ranking keeps the order and drops the tails.
+        keys = along_key[mask].astype(np.float64)
+        rank = np.argsort(np.argsort(keys)).astype(np.float64)
+        rank = rank / max(len(rank) - 1, 1)
+        lo, hi = keys.min(), keys.max()
+        bydate = (keys - lo) / max(hi - lo, 1e-9)
+        along = ((ARC_DATE_WEIGHT * bydate
+                  + (1 - ARC_DATE_WEIGHT) * rank) - 0.5) * 2.0
+
+        # Across the arc, rank through a taper. Uniform gives a slab with
+        # a hard edge; a sine puts most works near the spine and thins
+        # towards the margins, so the band reads as a ribbon and fades out
+        # instead of stopping.
         across_raw = local @ perp
         across_rank = np.argsort(np.argsort(across_raw)).astype(np.float64)
-        across = (across_rank / max(len(across_rank) - 1, 1) - 0.5) * 2.0
+        across_u = across_rank / max(len(across_rank) - 1, 1)
+        across = np.sin(np.pi * (across_u - 0.5)) * 1.0
+
         out[mask] = (centre
                      + np.outer(along * radii[name], u)
                      + np.outer(across * radii[name] * ARC_BAND, perp))
