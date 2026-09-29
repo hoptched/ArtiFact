@@ -51,8 +51,8 @@ body {
   overflow: hidden;
 }
 
-/* Swirls over the bar, so the one flat surface on the page has a grain
-   to it. Laid on as a separate layer rather than a background of its
+/* Swirls over the panels, so the flat surfaces on the page have a grain
+   to them. Laid on as a separate layer rather than a background of its
    own: the strength is then one number here, and the tile itself stays
    a plain figure-on-nothing that can be dropped on any colour.
 
@@ -60,7 +60,8 @@ body {
    cross-faded into each other and the folded strips dropped, which
    leaves the two sides as neighbours from the original — the join is
    now a smaller step than the one between any two adjacent pixels. */
-.sidebar::before {
+.sidebar::before,
+.detail::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -70,9 +71,11 @@ body {
   pointer-events: none;
 }
 
-/* Above the lattice. Without this the bar's own contents sit in the
-   same layer and the texture lands on top of the text. */
-.sidebar > * { position: relative; }
+/* Above the swirls. Without this a panel's own contents sit in the same
+   layer and the texture lands on top of the text. The close button sets
+   its own position and is more specific, so it keeps it. */
+.sidebar > *,
+.detail > * { position: relative; }
 
 /* The one thing still set in the display face. */
 .sidebar header h1 {
