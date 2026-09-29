@@ -377,7 +377,7 @@ export function MapCanvas({
           const fy = (f.y0 - vy) * s + cy;
           const fw = f.w * s, fh = f.h * s;
           if (fx + fw < 0 || fy + fh < 0 || fx > w || fy > h) continue;
-          ctx.globalAlpha = hoverRef.current === f.name ? 0.52 : 0.30;
+          ctx.globalAlpha = hoverRef.current === f.name ? 0.42 : 0.24;
           ctx.drawImage(f.tex, fx, fy, fw, fh);
         }
         ctx.globalAlpha = 1;

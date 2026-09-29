@@ -46,15 +46,17 @@ export interface Field {
  * Baked opaque: the alpha that matters is the blur's own, and how heavily
  * a field is drawn is decided when it is blitted.
  *
- * Chroma is pushed to the edge of what sRGB can show. At 0.13 the hues
- * were spread over the whole wheel but arrived as pastels once laid at
- * low alpha over a near-black map, so the wheel was there and could not
- * be seen. Where a hue cannot reach this chroma — the blues and violets
- * mostly — the browser maps it back into gamut, which costs those
- * regions some saturation and nothing else.
+ * Chroma is pushed near the edge of what sRGB can show, so each region
+ * ends as saturated as its own hue allows rather than every hue being
+ * held down to what cyan can manage. Where one cannot reach this, the
+ * browser maps it back to its gamut boundary, holding hue and lightness.
+ *
+ * Lightness is the dial that was overdone: the colours are meant to name
+ * a region, not to glow. Darker keeps the whole wheel legible while
+ * letting the paintings stay the brightest thing on the map.
  */
 function tint(hue: number) {
-  return `oklch(0.68 0.28 ${hue.toFixed(0)})`;
+  return `oklch(0.58 0.24 ${hue.toFixed(0)})`;
 }
 
 export function buildFields(regions: Region[]): Field[] {
