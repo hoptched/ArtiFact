@@ -7,6 +7,6 @@
   "count": 25515,
   "missing": 0,
   "prefix": "atlas",
-  "ordered": false,
-  "note": "tile index == position in the pack order; sheet = i // per_sheet, col = i % grid, row = (i % per_sheet) // grid"
+  "ordered": true,
+  "note": "tile index is the work's slot in data/atlas_slots.json, the same order the high-resolution atlas uses"
 }

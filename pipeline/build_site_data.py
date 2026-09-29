@@ -301,6 +301,21 @@ def main() -> None:
           f"{locality(order, umap_xy, 100):.1f} sheets "
           f"(vs {locality(np.arange(len(works)), umap_xy, 100):.1f} unordered)")
 
+    # The 64px sheets were packed along this same curve, and the tiles in
+    # them cannot be checked from here. If this run produces a different
+    # order, every tile on the map is the wrong picture and nothing else
+    # would say so, so say it here.
+    packed = out / "atlas_slots.json"
+    if packed.exists():
+        was = json.loads(packed.read_text())
+        if was != [int(v) for v in slot_of]:
+            print("\n  !! the 64px atlas was packed in a different order "
+                  "than this run computed.")
+            print("     Re-run scripts/d5c_repack.py, or every tile on the "
+                  "map will be the wrong work.\n")
+        else:
+            print("  64px atlas: packed in this order, tiles agree")
+
     (out / "layouts.json").write_text(json.dumps({
         "work_radius": round(layout.work_radius(len(works)), 5),
         "facets": layouts,

@@ -39,10 +39,11 @@ function AtlasCell({ bundle, index }: { bundle: Bundle; index: number }) {
     const canvas = ref.current;
     if (!canvas) return;
     const { tile, grid, per_sheet } = atlasMeta;
-    const sheet = sheets[(index / per_sheet) | 0];
+    const slot = bundle.slots[index];
+    const sheet = sheets[(slot / per_sheet) | 0];
     const ctx = canvas.getContext("2d");
     if (!sheet || !ctx) return;
-    const within = index % per_sheet;
+    const within = slot % per_sheet;
     const ar = works[index].ar ?? 1;
     const iw = ar >= 1 ? tile : tile * ar;
     const ih = ar >= 1 ? tile / ar : tile;

@@ -20,7 +20,7 @@ const FACETS: { key: Facet; label: string }[] = [
 ];
 
 export default function App() {
-  const { bundle, error } = useBundle();
+  const { bundle, error, needAtlas } = useBundle();
   const [facet, setFacet] = useState<Facet>("similarity");
   const [selected, setSelected] = useState<number | null>(null);
   const [focus, setFocus] = useState<Focus | null>(null);
@@ -220,6 +220,7 @@ export default function App() {
           onRegion={(x, y, r) => setFocus({ x, y, r, key: Date.now() })}
           rightInset={rightInset}
           paused={working !== ""}
+          onNeedAtlas={needAtlas}
         />
       </div>
 

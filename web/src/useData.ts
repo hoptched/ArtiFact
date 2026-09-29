@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { AtlasMeta, Facets, Layouts, Work } from "./types";
 
 export interface Bundle {
@@ -10,6 +10,10 @@ export interface Bundle {
   sheets: HTMLImageElement[];
   /** Quarter-size copies of the sheets, 16px to a tile. */
   mips: HTMLCanvasElement[];
+  /** Where each work's tile sits in the atlas. The sheets are packed
+   *  along a Hilbert curve through the map rather than in artwork-id
+   *  order, so a work's index no longer says where its tile is. */
+  slots: number[];
   hires: { meta: AtlasMeta; slots: number[] } | null;
 }
 
@@ -66,6 +70,15 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 export function useBundle() {
   const [bundle, setBundle] = useState<Bundle | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Resolved the first time the map wants a thumbnail. Until then the
+  // sheets are not fetched at all.
+  const gate = useRef<{ promise: Promise<void>; open: () => void }>(undefined!);
+  if (!gate.current) {
+    let open!: () => void;
+    const promise = new Promise<void>((res) => { open = res; });
+    gate.current = { promise, open };
+  }
+  const needAtlas = useCallback(() => gate.current.open(), []);
 
   useEffect(() => {
     let cancelled = false;
@@ -89,10 +102,12 @@ export function useBundle() {
         // state updates, and since `sheets` is a dependency of the effect
         // that owns the render loop, 25 teardowns and restarts of it
         // during the one moment the map is busiest.
+        const slots = await json<number[]>("data/atlas_slots.json");
+        if (cancelled) return;
         const sheets: HTMLImageElement[] = [];
         const mips: HTMLCanvasElement[] = [];
         setBundle({ works, layouts, facets, neighbors: {}, atlasMeta, sheets,
-                    mips, hires: null });
+                    mips, slots, hires: null });
 
         // Only read when a detail panel opens, which cannot happen before
         // there is a map to click on. Awaiting it here put 3.5 MB of JSON
@@ -114,6 +129,15 @@ export function useBundle() {
             }
           })
           .catch(() => { /* no high-resolution atlas built yet */ });
+
+        // Not until the map asks. At the view it opens on, a tile is
+        // under two pixels across, which is below the size at which the
+        // map draws a thumbnail at all: it paints flat colour and reads
+        // no sheet. Fetching all 25 up front spent 24 MB before a single
+        // pixel of it could be used, and anyone who looked at the map
+        // and left never used any of it.
+        await gate.current.promise;
+        if (cancelled) return;
 
         // A few at a time rather than one after another. These were
         // awaited in sequence, so the whole atlas cost 25 round trips
@@ -143,5 +167,5 @@ export function useBundle() {
     return () => { cancelled = true; };
   }, []);
 
-  return { bundle, error };
+  return { bundle, error, needAtlas };
 }
