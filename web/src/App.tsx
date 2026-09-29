@@ -22,9 +22,13 @@ export default function App() {
   const [facet, setFacet] = useState<Facet>("similarity");
   const [selected, setSelected] = useState<number | null>(null);
   const [focus, setFocus] = useState<Focus | null>(null);
-  const [pin, setPin] = useState<Pin | null>(null);
-  const [mapPin, setMapPin] = useState<MapPin | null>(null);
-  const [showOwn, setShowOwn] = useState(false);
+  // Every picture anyone has compared this session, oldest first. They
+  // stay on the map: the point of putting one there is to see where it
+  // falls, and that is a comparison you want to make more than once.
+  const [pins, setPins] = useState<Pin[]>([]);
+  const [mapPins, setMapPins] = useState<MapPin[]>([]);
+  // Which one's panel is open, by index, or null for none.
+  const [openPin, setOpenPin] = useState<number | null>(null);
 
   const flyTo = useCallback(
     (x: number, y: number) => setFocus({ x, y, r: 0.06, key: Date.now() }), []);
@@ -34,12 +38,17 @@ export default function App() {
   // occupy the same place, so choosing either has to release the other.
   const selectWork = useCallback((i: number | null) => {
     setSelected(i);
-    if (i !== null) setShowOwn(false);
+    if (i !== null) setOpenPin(null);
   }, []);
-  const openPin = useCallback(() => {
-    setShowOwn(true);
+  const showPin = useCallback((which: number) => {
+    setOpenPin(which);
     setSelected(null);
   }, []);
+  const addPin = useCallback((p: Pin) => {
+    setOpenPin(pins.length);      // where this one is about to land
+    setPins((all) => [...all, p]);
+    setSelected(null);
+  }, [pins.length]);
 
   // Follow one of a work's own facts onto the map: switch to that
   // grouping and travel to where this work lands in it. The works are
@@ -61,18 +70,24 @@ export default function App() {
     setFocus({ x: at[0], y: at[1], r, key: Date.now() });
   }, [bundle, selected]);
 
-  // The map draws a decoded image, so hold the pin back until it has
-  // loaded rather than flashing an empty frame where the picture goes.
+  // The map draws decoded images, so a picture is held back until its
+  // own has loaded rather than flashing an empty frame where it goes.
+  // Rebuilt from the whole list so the array the map reads stays in step
+  // with it, and so the indices the two sides use mean the same thing.
   useEffect(() => {
-    if (!pin) { setMapPin(null); return; }
     let live = true;
-    const img = new Image();
-    img.onload = () => {
-      if (live) setMapPin({ img, matches: pin.result.matches });
-    };
-    img.src = pin.url;
+    Promise.all(pins.map((p) => new Promise<MapPin>((resolve) => {
+      const img = new Image();
+      const done = () => resolve({ img, matches: p.result.matches });
+      img.onload = done;
+      // Resolved on failure too, so the array stays the same length as
+      // the list and an index means the same picture on both sides. The
+      // map skips one that did not decode.
+      img.onerror = done;
+      img.src = p.url;
+    }))).then((loaded) => { if (live) setMapPins(loaded); });
     return () => { live = false; };
-  }, [pin]);
+  }, [pins]);
 
   if (error) return <div className="status">Could not load the map: {error}</div>;
   if (!bundle) return <div className="status">Loading the collection…</div>;
@@ -107,8 +122,8 @@ export default function App() {
           bundle={bundle}
           facet={facet}
           onFocus={flyTo}
-          onPin={(p) => { setPin(p); setShowOwn(p !== null); }}
-          onOpen={() => setShowOwn(true)}
+          onPin={addPin}
+          onOpen={() => setOpenPin(pins.length - 1)}
         />
 
         <button
@@ -126,25 +141,25 @@ export default function App() {
           selected={selected}
           onSelect={selectWork}
           focus={focus}
-          pin={mapPin}
-          pinActive={showOwn}
-          onOpenPin={openPin}
+          pins={mapPins}
+          activePin={openPin}
+          onOpenPin={showPin}
           onRegion={(x, y, r) =>
             setFocus({ x, y, r: Math.max(r, 0.02), key: Date.now() })}
         />
       </div>
 
-      {showOwn && pin && (
+      {openPin !== null && pins[openPin] && (
         <OwnDetail
           bundle={bundle}
-          url={pin.url}
-          result={pin.result}
-          onSelect={(i) => { setShowOwn(false); setSelected(i); }}
-          onClose={() => setShowOwn(false)}
+          url={pins[openPin].url}
+          result={pins[openPin].result}
+          onSelect={selectWork}
+          onClose={() => setOpenPin(null)}
         />
       )}
 
-      {selected !== null && !showOwn && (
+      {selected !== null && openPin === null && (
         <Detail
           bundle={bundle}
           index={selected}

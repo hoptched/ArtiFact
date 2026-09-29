@@ -14,7 +14,7 @@ export function Compare({
   bundle: Bundle;
   facet: Facet;
   onFocus: (x: number, y: number) => void;
-  onPin: (pin: Pin | null) => void;
+  onPin: (pin: Pin) => void;
   onOpen: () => void;
 }) {
   const [status, setStatus] = useState("");
@@ -31,8 +31,9 @@ export function Compare({
     setBusy(true);
     setResult(null);
     const url = URL.createObjectURL(file);
-    setObjectUrl((old) => { if (old) URL.revokeObjectURL(old); return url; });
-    onPin(null);
+    // Not revoked when the next picture arrives: the earlier ones stay
+    // on the map and keep drawing from theirs.
+    setObjectUrl(url);
     try {
       await comparer.load(setStatus);
       setStatus("Looking…");

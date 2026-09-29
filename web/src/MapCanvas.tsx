@@ -127,7 +127,7 @@ export interface MapPin {
 }
 
 export function MapCanvas({
-  bundle, facet, selected, onSelect, focus, pin, pinActive, onOpenPin,
+  bundle, facet, selected, onSelect, focus, pins, activePin, onOpenPin,
   onRegion,
 }: {
   bundle: Bundle;
@@ -135,10 +135,10 @@ export function MapCanvas({
   selected: number | null;
   onSelect: (index: number | null) => void;
   focus: Focus | null;
-  /** Whether the uploaded picture is the thing currently selected. */
-  pinActive: boolean;
-  pin: MapPin | null;
-  onOpenPin: () => void;
+  /** Which uploaded picture is the thing currently selected, if any. */
+  activePin: number | null;
+  pins: MapPin[];
+  onOpenPin: (which: number) => void;
   onRegion: (x: number, y: number, r: number) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -161,8 +161,10 @@ export function MapCanvas({
   const hoverRef = useRef<string | null>(null);
   // Screen rectangle of the uploaded picture, written each frame so a
   // click can be tested against it before the nearest-work search.
+  // One per uploaded picture, written each frame, newest last — so a
+  // click tested from the end finds whichever is drawn on top.
   const pinRectRef = useRef<
-    { x: number; y: number; w: number; h: number } | null>(null);
+    { x: number; y: number; w: number; h: number; which: number }[]>([]);
   // Likewise the selected work, which is held at a legible size however
   // far out you are, so it stays as clickable as it is visible.
   const selRectRef = useRef<
@@ -543,52 +545,51 @@ export function MapCanvas({
       // position is read from the live animated coordinates rather than
       // the target layout, so when the grouping changes it travels with
       // its neighbours instead of jumping when they arrive.
-      if (pin && pin.matches.length) {
+      pinRectRef.current.length = 0;
+      for (let which = 0; which < pins.length; which++) {
+        const p = pins[which];
+        if (!p.matches.length) continue;
         // Same rule the panel uses: the region most of the neighbours
         // agree on, averaged over only the ones in it. Read from the live
         // animated coordinates, so it travels with them.
         const regionOf = layouts.facets[facet].region_of;
         const at = placeAmong(
-          pin.matches,
+          p.matches,
           (i) => (i * 2 + 1 < pos.length
             ? [pos[i * 2], pos[i * 2 + 1]] as [number, number] : null),
           regionOf && regionOf.length ? regionOf : null,
         );
-        if (at) {
-          const x = (at[0] - vx) * s + cx;
-          const y = (at[1] - vy) * s + cy;
-          const im = pin.img;
-          // Marked the way a selected work is marked, and sized the way
-          // one is: it belongs among its neighbours rather than looming
-          // over them. It used to sit on a dark plate inside a gold
-          // frame at three times tile size, which read as a different
-          // kind of object altogether.
-          const box = Math.max(size, SELECTED_MIN_PX * dpr);
-          const ar2 = im.naturalWidth / Math.max(im.naturalHeight, 1) || 1;
-          const pw = ar2 >= 1 ? box : box * ar2;
-          const ph = ar2 >= 1 ? box / ar2 : box;
+        if (!at) continue;
+        const x = (at[0] - vx) * s + cx;
+        const y = (at[1] - vy) * s + cy;
+        const im = p.img;
+        // Marked the way a selected work is marked, and sized the way
+        // one is: it belongs among its neighbours rather than looming
+        // over them.
+        const box = Math.max(size, SELECTED_MIN_PX * dpr);
+        const ar2 = im.naturalWidth / Math.max(im.naturalHeight, 1) || 1;
+        const pw = ar2 >= 1 ? box : box * ar2;
+        const ph = ar2 >= 1 ? box / ar2 : box;
 
-          pinRectRef.current = { x, y, w: pw, h: ph };
-          // Only when it is the selected thing. Two halos at once says
-          // two things are chosen, and nothing says which panel is open.
-          if (pinActive) glow(ctx, x, y, pw, ph, dpr);
-          if (im.complete && im.naturalWidth) {
-            ctx.imageSmoothingEnabled = true;
-            ctx.drawImage(im, x - pw / 2, y - ph / 2, pw, ph);
-          }
-
-          ctx.font = `600 ${11 * dpr}px ui-sans-serif, system-ui, sans-serif`;
-          ctx.textAlign = "center";
-          ctx.textBaseline = "bottom";
-          ctx.lineWidth = 4 * dpr;
-          ctx.strokeStyle = "rgba(6,6,8,0.9)";
-          ctx.strokeText("yours", x, y - ph / 2 - 8 * dpr);
-          ctx.fillStyle = "#f5c451";
-          ctx.fillText("yours", x, y - ph / 2 - 8 * dpr);
+        pinRectRef.current.push({ x, y, w: pw, h: ph, which });
+        // Only the one whose panel is open. Two halos at once says two
+        // things are chosen, and nothing says which panel that is.
+        if (activePin === which) glow(ctx, x, y, pw, ph, dpr);
+        if (im.complete && im.naturalWidth) {
+          ctx.imageSmoothingEnabled = true;
+          ctx.drawImage(im, x - pw / 2, y - ph / 2, pw, ph);
         }
-      }
 
-      if (!pin) pinRectRef.current = null;
+        ctx.font = `600 ${11 * dpr}px ui-sans-serif, system-ui, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "bottom";
+        ctx.lineWidth = 4 * dpr;
+        ctx.strokeStyle = "rgba(6,6,8,0.9)";
+        const tag = pins.length > 1 ? `yours ${which + 1}` : "yours";
+        ctx.strokeText(tag, x, y - ph / 2 - 8 * dpr);
+        ctx.fillStyle = "#f5c451";
+        ctx.fillText(tag, x, y - ph / 2 - 8 * dpr);
+      }
 
       const highlight = selectedRef.current;
       selRectRef.current = null;
@@ -657,7 +658,7 @@ export function MapCanvas({
     frame = requestAnimationFrame(draw);
     return () => { cancelAnimationFrame(frame); ro.disconnect(); };
   }, [works, layouts, facet, atlasMeta, sheets, mips, radius, fit, ready,
-      images, hires, hiAtlas, focus, pin, pinActive]);
+      images, hires, hiAtlas, focus, pins, activePin]);
 
   useEffect(() => {
     if (!focus) return;
@@ -767,19 +768,23 @@ export function MapCanvas({
     dragRef.current = null;
     if (!drag || drag.moved) return;
 
-    // The uploaded picture is drawn over the map and is larger than a
-    // tile, so it gets first refusal on a click.
-    const rect = pinRectRef.current;
-    if (rect) {
+    // An uploaded picture is drawn over the map and is larger than a
+    // tile, so it gets first refusal on a click. Tested newest first,
+    // which is the one drawn on top where two overlap.
+    {
       const canvas = canvasRef.current!;
       const box = canvas.getBoundingClientRect();
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const px = (e.clientX - box.left) * dpr;
       const py = (e.clientY - box.top) * dpr;
-      if (Math.abs(px - rect.x) <= rect.w / 2
-          && Math.abs(py - rect.y) <= rect.h / 2) {
-        onOpenPin();
-        return;
+      const rects = pinRectRef.current;
+      for (let n = rects.length - 1; n >= 0; n--) {
+        const rect = rects[n];
+        if (Math.abs(px - rect.x) <= rect.w / 2
+            && Math.abs(py - rect.y) <= rect.h / 2) {
+          onOpenPin(rect.which);
+          return;
+        }
       }
     }
 
