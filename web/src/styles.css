@@ -40,6 +40,7 @@ body {
 /* Left rail: everything that steers the map lives here, so the map itself
    is never overlapped by a control. */
 .sidebar {
+  position: relative;
   flex: 0 0 15.5rem;
   display: flex;
   flex-direction: column;
@@ -49,6 +50,26 @@ body {
   border-right: 1px solid var(--bar-edge);
   overflow: hidden;
 }
+
+/* A lattice over the bar, so the one flat surface on the page has a
+   grain to it. Laid on as a separate layer rather than a background of
+   its own: the strength is then one number here, and the tile itself
+   stays a plain figure-on-nothing that can be dropped on any colour.
+   129px is four repeats of the motif, cropped where the seam is
+   quietest, so it tiles without a visible join. */
+.sidebar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("./lattice.png") repeat;
+  background-size: 129px 129px;
+  opacity: 0.055;
+  pointer-events: none;
+}
+
+/* Above the lattice. Without this the bar's own contents sit in the
+   same layer and the texture lands on top of the text. */
+.sidebar > * { position: relative; }
 
 /* The one thing still set in the display face. */
 .sidebar header h1 {
