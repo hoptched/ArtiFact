@@ -106,7 +106,7 @@ export default function App() {
             </a>
           </h1>
           <p>
-            A collection of {bundle.works.length.toLocaleString()}{" "}
+            A browsable collection of {bundle.works.length.toLocaleString()}{" "}
             public-domain works from the Art Institute of Chicago.
           </p>
         </header>
