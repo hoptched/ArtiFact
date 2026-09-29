@@ -29,6 +29,11 @@ const MIN_FOCUS_R = 0.02;
 // band running along the arc. Tinting each century made the sequence look
 // like seven separate things. It stays clickable, just uncoloured.
 const TINTED_FACETS = new Set<Facet>(["country", "style"]);
+// Where a click on a region travels to it. Not the timeline: its bins are
+// bands across the whole ribbon rather than places you aim at, and a
+// century is a slice of a continuum, so flying to one answers a question
+// nobody asked by clicking there. Similarity has no regions at all.
+const REGION_CLICK_FACETS = new Set<Facet>(["country", "style"]);
 const LABEL_MAX_SCALE = 4200;
 const ANIM_MS = 750;
 /** How long the region fields take to appear once the works have settled. */
@@ -831,7 +836,8 @@ export function MapCanvas({
 
     // Smallest region containing the point, if any.
     let pick: { c: [number, number]; r: number } | null = null;
-    for (const region of layouts.facets[facet].regions) {
+    for (const region of REGION_CLICK_FACETS.has(facet)
+                         ? layouts.facets[facet].regions : []) {
       const within = region.o
         ? inside(region.o, world.x, world.y)
         : Math.hypot(world.x - region.c[0], world.y - region.c[1]) <= region.r;
