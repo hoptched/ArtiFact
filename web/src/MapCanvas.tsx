@@ -465,24 +465,35 @@ export function MapCanvas({
 
       // The background, with the grouping's ground already in it.
       //
-      // Painted once into an image the size of the viewport and blitted
-      // after that. It was a full-screen pattern fill every frame, with
-      // a transform on the pattern, which is the arrangement least
-      // likely to stay on a fast path — and it cost that on every frame
-      // to produce pixels that never change. It is repainted only when
-      // the grouping, the viewport or the pixel ratio changes.
+      // Painted once and blitted after that: a full-screen pattern fill
+      // every frame, with a transform on the pattern, is the arrangement
+      // least likely to stay on a fast path, and it cost that on every
+      // frame to produce pixels that never change.
+      //
+      // It travels with the map. One tile wider and taller than the
+      // viewport, drawn at minus however far the map has been panned,
+      // wrapped to the tile: the ground slides under the works as though
+      // they were laid on it, and the extra tile is what the blit walks
+      // into rather than running out of canvas at the edge.
+      //
+      // Panning only. Tied to the zoom as well, one swirl would fill the
+      // screen at the far end and be a grain of dust at the other; the
+      // pattern is the surface the map is drawn on, not a thing on the
+      // map with a size of its own.
       const ground = groundRef.current[facet];
+      const tpx = ground ? ground.naturalWidth * dpr * GROUND_SCALE : 0;
+      const tpy = ground ? ground.naturalHeight * dpr * GROUND_SCALE : 0;
       const baked = bakedRef.current;
       if (ground && ground.complete && ground.naturalWidth
           && (!baked || baked.facet !== facet || baked.w !== w
               || baked.h !== h || baked.dpr !== dpr)) {
         const off = document.createElement("canvas");
-        off.width = w;
-        off.height = h;
+        off.width = Math.ceil(w + tpx);
+        off.height = Math.ceil(h + tpy);
         const oc = off.getContext("2d");
         if (oc) {
           oc.fillStyle = "#0d0d0f";
-          oc.fillRect(0, 0, w, h);
+          oc.fillRect(0, 0, off.width, off.height);
           const pattern = oc.createPattern(ground, "repeat");
           if (pattern) {
             // Scaled by the pixel ratio, or the tile comes out half size
@@ -490,14 +501,22 @@ export function MapCanvas({
             pattern.setTransform(new DOMMatrix().scale(dpr * GROUND_SCALE));
             oc.globalAlpha = GROUND_ALPHA;
             oc.fillStyle = pattern;
-            oc.fillRect(0, 0, w, h);
+            oc.fillRect(0, 0, off.width, off.height);
           }
           bakedRef.current = { facet, w, h, dpr, canvas: off };
         }
       }
       const ready = bakedRef.current;
-      if (ready && ready.facet === facet && ready.w === w && ready.h === h) {
-        ctx.drawImage(ready.canvas, 0, 0);
+      if (ready && ready.facet === facet && ready.w === w && ready.h === h
+          && tpx > 0 && tpy > 0) {
+        // Where the map's own origin falls on screen, wrapped to one
+        // tile, so the offset stays small however far anyone has gone.
+        const wrap = (v: number, t: number) => ((v % t) + t) % t;
+        ctx.drawImage(
+          ready.canvas,
+          wrap(-vx * s + cx, tpx) - tpx,
+          wrap(-vy * s + cy, tpy) - tpy,
+        );
       } else {
         ctx.fillStyle = "#0d0d0f";
         ctx.fillRect(0, 0, w, h);
