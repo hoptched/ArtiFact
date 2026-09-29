@@ -756,8 +756,8 @@ export function MapCanvas({
         // no edge — it darkens what is under the letters just enough to
         // hold them. Set once for the whole pass: shadow state is sticky
         // on a context and would otherwise carry into the next frame.
-        ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
-        ctx.shadowBlur = 6 * dpr;
+        ctx.shadowColor = "rgba(0, 0, 0, 0.6)";
+        ctx.shadowBlur = 7 * dpr;
         for (const region of regions) {
           const px = (region.c[0] - vx) * s + cx;
           const py = (region.c[1] - vy) * s + cy;
@@ -765,7 +765,11 @@ export function MapCanvas({
           const font = Math.min(34, Math.max(11, region.r * s * 0.24)) * dpr;
           if (font < 9 * dpr) continue;
           ctx.font = `600 ${font}px ui-sans-serif, system-ui, sans-serif`;
-          ctx.fillStyle = "rgba(255,255,255,0.9)";
+          // Drawn twice, so the shadow lands twice and actually reads.
+          // The fill is dropped to 0.68 to compensate: two passes at that
+          // composite to 1 - 0.32^2, which is the 0.9 the name should be.
+          ctx.fillStyle = "rgba(255,255,255,0.68)";
+          ctx.fillText(region.name, px, py);
           ctx.fillText(region.name, px, py);
         }
         ctx.restore();
