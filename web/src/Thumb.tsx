@@ -16,9 +16,7 @@ import { useEffect, useRef, useState } from "react";
  */
 const BACKOFF_MS = [400, 1200, 3000];
 
-export function Thumb(
-  { src, alt, eager }: { src: string; alt: string; eager?: boolean },
-) {
+export function Thumb({ src, alt }: { src: string; alt: string }) {
   const [attempt, setAttempt] = useState(0);
   const [dead, setDead] = useState(false);
   const timer = useRef<number | undefined>(undefined);
@@ -37,7 +35,6 @@ export function Thumb(
       key={attempt}
       src={src}
       alt={alt}
-      loading={eager ? "eager" : "lazy"}
       // AIC 403s a localhost referer; sending none works everywhere.
       referrerPolicy="no-referrer"
       onError={() => {

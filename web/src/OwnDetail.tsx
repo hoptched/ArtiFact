@@ -99,6 +99,7 @@ export function OwnDetail({
               key={w.id}
               onClick={() => onSelect(m.index)}
               title={`${w.t} — ${(m.similarity * 100).toFixed(0)}% alike`}
+              style={{ background: w.k ?? undefined }}
             >
               <Thumb src={iiifUrl(facets.iiif, w.img, 200)} alt={w.t} />
             </button>
