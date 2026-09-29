@@ -51,19 +51,22 @@ body {
   overflow: hidden;
 }
 
-/* A lattice over the bar, so the one flat surface on the page has a
-   grain to it. Laid on as a separate layer rather than a background of
-   its own: the strength is then one number here, and the tile itself
-   stays a plain figure-on-nothing that can be dropped on any colour.
-   129px is four repeats of the motif, cropped where the seam is
-   quietest, so it tiles without a visible join. */
+/* Swirls over the bar, so the one flat surface on the page has a grain
+   to it. Laid on as a separate layer rather than a background of its
+   own: the strength is then one number here, and the tile itself stays
+   a plain figure-on-nothing that can be dropped on any colour.
+
+   The drawing does not repeat, so the tile was made to. Its edges were
+   cross-faded into each other and the folded strips dropped, which
+   leaves the two sides as neighbours from the original — the join is
+   now a smaller step than the one between any two adjacent pixels. */
 .sidebar::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: url("./lattice.png") repeat;
-  background-size: 129px 129px;
-  opacity: 0.055;
+  background: url("./swirls.png") repeat;
+  background-size: 280px 280px;
+  opacity: 0.035;
   pointer-events: none;
 }
 
