@@ -197,8 +197,9 @@ export function MapCanvas({
   // The ground tiles, decoded once and kept. A pattern is rebuilt only
   // when the facet or the pixel ratio changes, not per frame.
   const groundRef = useRef<Partial<Record<Facet, HTMLImageElement>>>({});
-  const patternRef = useRef<{ facet: Facet; dpr: number;
-                              pattern: CanvasPattern } | null>(null);
+  // The background painted out at viewport size, ground and all.
+  const bakedRef = useRef<{ facet: Facet; w: number; h: number; dpr: number;
+                            canvas: HTMLCanvasElement } | null>(null);
   // Which work wears the highlight. A ref rather than a dependency of the
   // render effect: selecting is the most common thing anyone does here,
   // and it changes one rectangle, not the loop that draws the map.
@@ -400,30 +401,44 @@ export function MapCanvas({
       const s = scale * dpr;
       const cx = w / 2, cy = h / 2;
 
-      ctx.fillStyle = "#0d0d0f";
-      ctx.fillRect(0, 0, w, h);
-
-      // The grouping's own ground, over the flat fill and under
-      // everything else.
+      // The background, with the grouping's ground already in it.
+      //
+      // Painted once into an image the size of the viewport and blitted
+      // after that. It was a full-screen pattern fill every frame, with
+      // a transform on the pattern, which is the arrangement least
+      // likely to stay on a fast path — and it cost that on every frame
+      // to produce pixels that never change. It is repainted only when
+      // the grouping, the viewport or the pixel ratio changes.
       const ground = groundRef.current[facet];
-      if (ground && ground.complete && ground.naturalWidth) {
-        const held = patternRef.current;
-        if (!held || held.facet !== facet || held.dpr !== dpr) {
-          const pattern = ctx.createPattern(ground, "repeat");
+      const baked = bakedRef.current;
+      if (ground && ground.complete && ground.naturalWidth
+          && (!baked || baked.facet !== facet || baked.w !== w
+              || baked.h !== h || baked.dpr !== dpr)) {
+        const off = document.createElement("canvas");
+        off.width = w;
+        off.height = h;
+        const oc = off.getContext("2d");
+        if (oc) {
+          oc.fillStyle = "#0d0d0f";
+          oc.fillRect(0, 0, w, h);
+          const pattern = oc.createPattern(ground, "repeat");
           if (pattern) {
             // Scaled by the pixel ratio, or the tile comes out half size
             // on a dense screen and twice as busy as it was drawn.
             pattern.setTransform(new DOMMatrix().scale(dpr));
-            patternRef.current = { facet, dpr, pattern };
+            oc.globalAlpha = GROUND_ALPHA;
+            oc.fillStyle = pattern;
+            oc.fillRect(0, 0, w, h);
           }
+          bakedRef.current = { facet, w, h, dpr, canvas: off };
         }
-        const ready = patternRef.current;
-        if (ready && ready.facet === facet) {
-          ctx.globalAlpha = GROUND_ALPHA;
-          ctx.fillStyle = ready.pattern;
-          ctx.fillRect(0, 0, w, h);
-          ctx.globalAlpha = 1;
-        }
+      }
+      const ready = bakedRef.current;
+      if (ready && ready.facet === facet && ready.w === w && ready.h === h) {
+        ctx.drawImage(ready.canvas, 0, 0);
+      } else {
+        ctx.fillStyle = "#0d0d0f";
+        ctx.fillRect(0, 0, w, h);
       }
 
       // Century rules, behind everything. Recessive: they are a scale to
