@@ -9,12 +9,15 @@ const comparer = new Comparer();
 export interface Pin { url: string; result: CompareResult }
 
 export function Compare({
-  bundle, facet, onFocus, onPin,
+  bundle, facet, onFocus, onPin, onWorking,
 }: {
   bundle: Bundle;
   facet: Facet;
   onFocus: (x: number, y: number) => void;
   onPin: (pin: Pin) => void;
+  /** What the comparison is doing, or "" when it has finished. The model
+   *  runs on this thread, so the rest of the page has to stand aside. */
+  onWorking: (stage: string) => void;
 }) {
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
@@ -25,15 +28,19 @@ export function Compare({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const run = useCallback(async (file: File) => {
+    // Every stage goes to both: the slot shows it, and the page uses it
+    // to know it should stop taking input.
+    const stage = (text: string) => { setStatus(text); onWorking(text); };
     setError(null);
     setBusy(true);
+    stage("Waking the model…");
     const url = URL.createObjectURL(file);
     // Not revoked when the next picture arrives: the earlier ones stay
     // on the map and keep drawing from theirs.
     setObjectUrl(url);
     try {
-      await comparer.load(setStatus);
-      setStatus("Looking…");
+      await comparer.load(stage);
+      stage("Looking…");
       const res = await comparer.compare(file);
       onPin({ url, result: res });
       const layout = bundle.layouts.facets[facet];
@@ -43,14 +50,17 @@ export function Compare({
         layout.region_of?.length ? layout.region_of : null,
       );
       if (at) onFocus(at[0], at[1]);
-      setStatus("");
+      stage("");
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
-      setStatus("");
+      stage("");
     } finally {
       setBusy(false);
+      // Here as well as on each path out, so no failure anyone has not
+      // thought of can leave the page locked behind the overlay.
+      stage("");
     }
-  }, [bundle, facet, onFocus, onPin]);
+  }, [bundle, facet, onFocus, onPin, onWorking]);
 
   return (
     <section className="compare">

@@ -600,3 +600,24 @@ dd { margin: 0; font-size: 0.85rem; }
 @media (prefers-reduced-motion: reduce) {
   .neon span { animation-duration: 10.7s; }
 }
+
+/* The page standing aside while the model runs. */
+.working {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6, 6, 8, 0.55);
+  cursor: progress;
+}
+.working p {
+  margin: 0;
+  padding: 12px 20px;
+  border-radius: 7px;
+  background: rgba(11, 11, 13, 0.92);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-size: 0.86rem;
+}

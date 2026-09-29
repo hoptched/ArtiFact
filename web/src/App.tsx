@@ -81,6 +81,10 @@ export default function App() {
   // rather than assumed, because the panel's width is set in CSS and it
   // moves to the bottom of the screen on a narrow one, where it covers
   // nothing on the right.
+  // What the comparison is doing, or "" when nothing is. The model runs
+  // on this thread, so while it does the page stops accepting input
+  // rather than accepting it slowly.
+  const [working, setWorking] = useState("");
   const [rightInset, setRightInset] = useState(0);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const measure = useCallback(() => {
@@ -176,6 +180,7 @@ export default function App() {
           facet={facet}
           onFocus={flyTo}
           onPin={addPin}
+          onWorking={setWorking}
         />
 
         <div className="actions">
@@ -214,8 +219,18 @@ export default function App() {
           onOpenPin={showPin}
           onRegion={(x, y, r) => setFocus({ x, y, r, key: Date.now() })}
           rightInset={rightInset}
+          paused={working !== ""}
         />
       </div>
+
+      {/* Over everything, so nothing underneath can be clicked. The wait
+          is short and the thread is busy; letting the page answer slowly
+          would only make it feel broken. */}
+      {working && (
+        <div className="working" role="status" aria-live="polite">
+          <p>{working}</p>
+        </div>
+      )}
 
       {openPin !== null && pins[openPin] && (
         <OwnDetail

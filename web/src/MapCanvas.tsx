@@ -172,7 +172,7 @@ export interface MapPin {
 
 export function MapCanvas({
   bundle, facet, selected, onSelect, focus, pins, activePin, onOpenPin,
-  onRegion, rightInset,
+  onRegion, rightInset, paused,
 }: {
   bundle: Bundle;
   facet: Facet;
@@ -189,6 +189,10 @@ export function MapCanvas({
    *  sits over it, so without this the map centres itself underneath
    *  the panel and half of what it framed cannot be seen. */
   rightInset: number;
+  /** True while something else needs this thread. The map draws 25,515
+   *  tiles a frame; giving that up is most of what makes the wait
+   *  bearable, and a half-drawn map is worse than a still one. */
+  paused: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const viewRef = useRef<View>({ x: 0.5, y: 0.5, scale: 0 });
@@ -297,6 +301,9 @@ export function MapCanvas({
   // something actually asks to be framed.
   const insetRef = useRef(rightInset);
   insetRef.current = rightInset;
+  // A ref, so pausing does not tear down and rebuild the render loop.
+  const pausedRef = useRef(paused);
+  pausedRef.current = paused;
 
   const seen = useCallback(
     (rect: DOMRect) => Math.min(rect.width - insetRef.current, rect.height),
@@ -403,6 +410,7 @@ export function MapCanvas({
 
     const draw = () => {
       frame = requestAnimationFrame(draw);
+      if (pausedRef.current) return;
       const ctx = canvas.getContext("2d");
       if (!ctx || posRef.current.length === 0) return;
 
