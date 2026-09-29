@@ -53,9 +53,8 @@ export function OwnDetail({
           {result.style ? (
             <>
               <span className="predicted">{result.style.label}</span>
-              <span className="muted"> predicted</span>
               <span className="conf">
-                <em>{percent(result.style.confidence)} confident</em>
+                <em>predicted · {percent(result.style.confidence)}</em>
               </span>
             </>
           ) : <span className="withheld">not predicted</span>}

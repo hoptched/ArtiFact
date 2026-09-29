@@ -4,9 +4,11 @@ import { Thumb } from "./Thumb";
 import type { Facet } from "./types";
 
 function Confidence({ value }: { value: number }) {
-  // Three dots and a two-decimal number said the same thing twice, and
-  // the dots quantised it to a third so 0.34 and 0.66 looked alike.
-  return <span className="conf"><em>{percent(value)} confident</em></span>;
+  // 'Predicted' belongs with the number rather than with the label: it
+  // is the number that says how far to trust it, and the two should
+  // carry the same weight rather than the word sitting up beside the
+  // style in a larger face.
+  return <span className="conf"><em>predicted · {percent(value)}</em></span>;
 }
 
 export function Detail({
@@ -48,14 +50,13 @@ export function Detail({
       <dl>
         <dt>Date</dt>
         <dd>
+          {/* The museum's own wording, and nothing else. The bin and the
+              precision behind it are how the timeline is built, not what
+              anyone came to the panel to read. */}
           <button className="jump" onClick={() => onGoTo("period")}
                   title="Find this work on the timeline">
             {work.d ?? "—"}
           </button>
-          <span className="muted"> · {work.p} ({work.prec})</span>
-          {work.pb.length > 1 && (
-            <span className="muted"> · spans {work.pb.length} periods</span>
-          )}
         </dd>
 
         <dt>Place</dt>
@@ -76,7 +77,6 @@ export function Detail({
                       title={`Find this work among ${work.s}`}>
                 {work.s}
               </button>
-              <span className="muted"> predicted</span>
               {work.sc !== null && <Confidence value={work.sc} />}
             </>
           )}
