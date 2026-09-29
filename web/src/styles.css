@@ -1,13 +1,10 @@
 :root {
   --bg: #0d0d0f;          /* the map stays near-black, so art reads */
   --panel: #16161a;       /* detail panel, also dark for the same reason */
-  /* The rail is a tool bar, not a canvas: mid grey, with buttons that sit
-     slightly proud of it. */
+  /* The rail is a tool bar, not a canvas: mid grey, with keys that stand
+     proud of it on their own sides. */
   --bar: #3b3b3d;
   --bar-edge: #2b2b2d;
-  --btn: #4a4a4d;
-  --btn-hover: #545457;
-  --btn-line: #5c5c60;
   --line: #2a2a31;
   --ink: #ece9e4;
   --muted: #a6a29b;
@@ -429,22 +426,39 @@ dd { margin: 0; font-size: 0.85rem; }
 /* Compare-your-own. Just the drop zone and a one-line verdict now; the
    results have a panel of their own on the right. */
 .compare { flex: 0 0 auto; }
+/* Sunk rather than raised, which is the one place on the bar that
+   should be. The keys stand proud because you press them; this is a
+   slot you put something into, so it is a well with the same grain in
+   it and a lip catching the light along the top.
+   The dashed line moves inside as an inset outline: it is the cue that
+   the well will take a file, not the edge of the well. */
 .compare .drop {
   width: 100%;
   min-height: 4rem;
   display: grid;
   place-items: center;
   padding: 8px;
-  background: var(--btn);
-  border: 1px dashed var(--btn-line);
-  border-radius: 4px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--noise), #2c2c2e;
+  background-blend-mode: overlay;
+  box-shadow:
+    inset 0 2px 6px rgba(0, 0, 0, 0.8),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.55),
+    0 1px 0 rgba(255, 255, 255, 0.08);
+  outline: 1px dashed rgba(255, 255, 255, 0.13);
+  outline-offset: -7px;
   color: var(--muted);
   font: inherit;
   font-size: 0.76rem;
   text-align: center;
   cursor: pointer;
+  transition: outline-color 0.15s, color 0.15s;
 }
-.compare .drop:hover:not(:disabled) { background: var(--btn-hover); }
+.compare .drop:hover:not(:disabled) {
+  outline-color: rgba(245, 196, 81, 0.45);
+  color: var(--ink);
+}
 .compare .drop:disabled { cursor: progress; }
 .compare .drop img { max-width: 100%; max-height: 5.5rem; display: block; }
 .compare .verdict {
