@@ -634,6 +634,12 @@ dd { margin: 0; font-size: 0.85rem; }
      mark has nothing to sit against on the left. */
   .sidebar header h1 { display: flex; justify-content: center; }
   .sidebar header h1 a { width: 30%; min-width: 96px; }
+  /* The strapline and both section headings go here and only here. A
+     bar across the top spends its height on the map, and four labelled
+     keys and a button say what they are without a caption over them.
+     A rail has the room, so on a phone lying down they stay. */
+  .sidebar header p { display: none; }
+  .sidebar h2 { display: none; }
 
   /* Over the whole screen, not a drawer at the foot of it. A work is the
      thing you came for, and half a phone is not enough of one. */
@@ -652,10 +658,6 @@ dd { margin: 0; font-size: 0.85rem; }
    width to spare and a phone lying down has no height. */
 @media (max-width: 820px), (max-height: 640px) {
   .sidebar { gap: 6px; padding: 7px 12px 6px; }
-  /* The strapline and both section headings: four labelled keys and a
-     button say what they are without a caption over them. */
-  .sidebar header p { display: none; }
-  .sidebar h2 { display: none; }
 
   .switcher { gap: 5px; padding-bottom: var(--key-depth); }
   .switcher button { padding: 6px 8px; font-size: 0.74rem; }
