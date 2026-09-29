@@ -72,6 +72,22 @@ export default function App() {
     setFocus({ x: at[0], y: at[1], r, key: Date.now() });
   }, [bundle, selected]);
 
+  // Somewhere you would not have gone. Lands on the work in the grouping
+  // you are already in, at the same distance following a fact does, so
+  // it arrives among neighbours rather than on a work alone.
+  const surprise = useCallback(() => {
+    if (!bundle) return;
+    const i = Math.floor(Math.random() * bundle.works.length);
+    const layout = bundle.layouts.facets[facet];
+    const at = layout.xy[i];
+    setSelected(i);
+    setOpenPin(null);
+    if (at) {
+      const r = (layout.work_radius ?? bundle.layouts.work_radius) * 15;
+      setFocus({ x: at[0], y: at[1], r, key: Date.now() });
+    }
+  }, [bundle, facet]);
+
   // The map draws decoded images, so a picture is held back until its
   // own has loaded rather than flashing an empty frame where it goes.
   // Rebuilt from the whole list so the array the map reads stays in step
@@ -134,12 +150,15 @@ export default function App() {
           onPin={addPin}
         />
 
-        <button
-          className="reset"
-          onClick={() => setFocus({ x: 0.5, y: 0.5, r: 0.5, key: Date.now() })}
-        >
-          Whole map
-        </button>
+        <div className="actions">
+          <button
+            className="reset"
+            onClick={() => setFocus({ x: 0.5, y: 0.5, r: 0.5, key: Date.now() })}
+          >
+            Whole map
+          </button>
+          <button className="reset" onClick={surprise}>Surprise me</button>
+        </div>
         <About works={bundle.works.length} />
       </aside>
 

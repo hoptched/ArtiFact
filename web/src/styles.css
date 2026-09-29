@@ -202,14 +202,17 @@ body {
     0 0 7px 1px rgba(61, 220, 74, 0.55);
 }
 
-/* The same key as the others — it is one of the controls on the bar, not
-   a footnote to them. Only its width differs: it takes its label rather
-   than a share of a row, since it is not one of a set. */
+/* The same key as the others — these are controls on the bar, not
+   footnotes to them. The two that act rather than choose share a row
+   evenly, so neither reads as the main one. */
+.actions {
+  display: flex;
+  gap: 6px;
+  padding-bottom: var(--key-depth);    /* room for the sides again */
+}
 .sidebar .reset {
+  flex: 1 1 0;
   width: auto;
-  flex: 0 0 auto;
-  align-self: flex-start;
-  margin-bottom: var(--key-depth);     /* its side, again */
 }
 
 .stage { position: relative; flex: 1 1 auto; min-width: 0; }
