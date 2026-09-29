@@ -157,7 +157,19 @@ export default function App() {
           >
             Whole map
           </button>
-          <button className="reset" onClick={surprise}>Surprise me</button>
+          <button className="reset" onClick={surprise}>
+            {/* One span per letter, so the colour can travel along the
+                word rather than changing it all at once. Wrapped in a
+                single element because the key is a flex row with a gap,
+                and loose letters would each be spaced by it. */}
+            <span className="neon">
+              {"Surprise me".split("").map((ch, i) => (
+                <span key={i} style={{ animationDelay: `${i * 0.1}s` }}>
+                  {ch === " " ? "\u00a0" : ch}
+                </span>
+              ))}
+            </span>
+          </button>
         </div>
         <About works={bundle.works.length} />
       </aside>

@@ -567,3 +567,24 @@ dd { margin: 0; font-size: 0.85rem; }
   cursor: pointer;
 }
 .about .close:hover { color: var(--ink); }
+
+/* Surprise me, lit. Red, green and blue in turn, each letter a tenth of
+   a second behind the one before it, so the colour runs along the word
+   instead of the whole label blinking. The glow is currentColor, so it
+   follows the letter's colour without a second animation to keep in
+   step. */
+@keyframes neon {
+  0%   { color: #ff1e56; }
+  33%  { color: #39ff14; }
+  66%  { color: #2d9bff; }
+  100% { color: #ff1e56; }
+}
+.neon span {
+  display: inline-block;
+  animation: neon 8s linear infinite;
+  text-shadow: 0 0 7px currentColor;
+}
+/* Still lit, no longer moving. */
+@media (prefers-reduced-motion: reduce) {
+  .neon span { animation: none; color: #39ff14; }
+}
