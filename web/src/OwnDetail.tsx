@@ -1,6 +1,6 @@
 import type { Bundle } from "./useData";
 import type { CompareResult } from "./compare";
-import { iiifUrl } from "./types";
+import { iiifUrl, percent } from "./types";
 import { Thumb } from "./Thumb";
 
 /** The most common value among the closest matches, and how dominant it is. */
@@ -55,7 +55,7 @@ export function OwnDetail({
               <span className="predicted">{result.style.label}</span>
               <span className="muted"> predicted</span>
               <span className="conf">
-                <em>{result.style.confidence.toFixed(2)}</em>
+                <em>{percent(result.style.confidence)} confident</em>
               </span>
             </>
           ) : <span className="withheld">not predicted</span>}

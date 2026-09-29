@@ -3,6 +3,7 @@ import type { Bundle } from "./useData";
 import type { CompareResult } from "./compare";
 import { Comparer, placeAmong } from "./compare";
 import type { Facet } from "./types";
+import { percent } from "./types";
 
 const comparer = new Comparer();
 
@@ -100,7 +101,7 @@ export function Compare({
           {result.style && (
             <>
               <b>{result.style.label}</b>{" "}
-              <span className="muted">{result.style.confidence.toFixed(2)}</span>
+              <span className="muted">{percent(result.style.confidence)}</span>
             </>
           )}
           <button className="link" onClick={onOpen}>details</button>

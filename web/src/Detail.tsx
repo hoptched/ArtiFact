@@ -1,20 +1,12 @@
 import type { Bundle } from "./useData";
-import { iiifUrl } from "./types";
+import { iiifUrl, percent } from "./types";
 import { Thumb } from "./Thumb";
 import type { Facet } from "./types";
 
-const CONFIDENCE_STEPS = 3;
-
 function Confidence({ value }: { value: number }) {
-  const filled = Math.max(1, Math.round(value * CONFIDENCE_STEPS));
-  return (
-    <span className="conf" title={`confidence ${value.toFixed(2)}`}>
-      {Array.from({ length: CONFIDENCE_STEPS }, (_, i) => (
-        <i key={i} className={i < filled ? "on" : ""} />
-      ))}
-      <em>{value.toFixed(2)}</em>
-    </span>
-  );
+  // Three dots and a two-decimal number said the same thing twice, and
+  // the dots quantised it to a third so 0.34 and 0.66 looked alike.
+  return <span className="conf"><em>{percent(value)} confident</em></span>;
 }
 
 export function Detail({

@@ -70,3 +70,10 @@ export function iiifUrl(template: string, imageId: string, width: number) {
     .replaceAll("{image_id}", imageId)
     .replaceAll("{width}", String(width));
 }
+
+/** A classifier probability as a percentage. Rounded to whole points:
+ *  the second decimal was reading as precision the number does not have,
+ *  and nothing anyone does with it turns on a hundredth. */
+export function percent(value: number) {
+  return `${Math.round(value * 100)}%`;
+}

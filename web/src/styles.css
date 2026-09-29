@@ -274,11 +274,6 @@ dd { margin: 0; font-size: 0.85rem; }
 .withheld { color: var(--muted); font-style: italic; }
 
 .conf { display: inline-flex; align-items: center; gap: 3px; margin-left: 8px; }
-.conf i {
-  width: 6px; height: 6px; border-radius: 50%;
-  background: var(--line); display: inline-block;
-}
-.conf i.on { background: var(--accent); }
 .conf em { font-style: normal; color: var(--muted); font-size: 0.72rem; margin-left: 4px; }
 
 .similar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
