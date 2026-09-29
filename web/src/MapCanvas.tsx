@@ -217,6 +217,11 @@ export function MapCanvas({
   // is simply there.
   const fieldFadeRef = useRef<number | null>(0);
   const dragRef = useRef<{ x: number; y: number; moved: boolean } | null>(null);
+  // Every finger currently down, and the pinch two of them are holding.
+  // The canvas sets touch-action: none so the browser does nothing with
+  // them, which left a phone with no way to zoom at all.
+  const touchRef = useRef(new Map<number, { x: number; y: number }>());
+  const pinchRef = useRef<{ gap: number; x: number; y: number } | null>(null);
   const hiWantedRef = useRef<Set<number>>(new Set());
   // The ground tiles, decoded once and kept. A pattern is rebuilt only
   // when the facet or the pixel ratio changes, not per frame.
@@ -932,13 +937,59 @@ export function MapCanvas({
     return () => canvas.removeEventListener("wheel", onWheel);
   }, [homeView]);
 
+  /** The gap between two fingers and the point halfway between them. */
+  const spread = () => {
+    const [a, b] = [...touchRef.current.values()];
+    return {
+      gap: Math.hypot(a.x - b.x, a.y - b.y),
+      x: (a.x + b.x) / 2,
+      y: (a.y + b.y) / 2,
+    };
+  };
+
   const onPointerDown = (e: React.PointerEvent) => {
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
     flyRef.current = null;      // any interaction cancels a flight
+    touchRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (touchRef.current.size === 2) {
+      // A second finger ends the drag the first one started, so the
+      // pinch is not also read as a pan and then as a click.
+      dragRef.current = null;
+      pinchRef.current = spread();
+      return;
+    }
     dragRef.current = { x: e.clientX, y: e.clientY, moved: false };
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
+    if (touchRef.current.has(e.pointerId)) {
+      touchRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    }
+    // Two fingers: the change in their gap is the zoom and the travel of
+    // the point between them is the pan, both taken against the same
+    // frame so the map stays under the fingers holding it.
+    const was = pinchRef.current;
+    if (was && touchRef.current.size === 2) {
+      const now = spread();
+      const canvas = canvasRef.current;
+      if (!canvas || was.gap <= 0) return;
+      const rect = canvas.getBoundingClientRect();
+      const view = viewRef.current;
+      const at = (cx: number, cy: number, s: number) => ({
+        x: (cx - rect.left - rect.width / 2) / s + view.x,
+        y: (cy - rect.top - rect.height / 2) / s + view.y,
+      });
+      const before = at(was.x, was.y, view.scale);
+      const floor = homeView(rect).scale;
+      view.scale = Math.min(
+        Math.max(view.scale * (now.gap / was.gap), floor), 260000);
+      const after = at(now.x, now.y, view.scale);
+      view.x += before.x - after.x;
+      view.y += before.y - after.y;
+      pinchRef.current = now;
+      return;
+    }
+
     const drag = dragRef.current;
     if (!drag) {
       // Smallest region under the cursor wins, so a small one nested
@@ -972,6 +1023,16 @@ export function MapCanvas({
   };
 
   const onPointerUp = (e: React.PointerEvent) => {
+    touchRef.current.delete(e.pointerId);
+    if (touchRef.current.size < 2) pinchRef.current = null;
+    // A finger lifted from a pinch leaves the other one still down, and
+    // it has no drag of its own to continue, so it starts one from here
+    // rather than jumping the map by however far the pinch travelled.
+    if (touchRef.current.size === 1 && !dragRef.current) {
+      const [only] = [...touchRef.current.values()];
+      dragRef.current = { x: only.x, y: only.y, moved: true };
+      return;
+    }
     const drag = dragRef.current;
     dragRef.current = null;
     if (!drag || drag.moved) return;
@@ -1082,7 +1143,9 @@ export function MapCanvas({
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      onPointerCancel={() => { dragRef.current = null; }}
+      // Same path as a lift, so a cancelled finger is forgotten rather
+      // than left in the set and counted towards a pinch that has ended.
+      onPointerCancel={onPointerUp}
     />
   );
 }
