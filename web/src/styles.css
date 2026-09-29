@@ -461,7 +461,7 @@ dd { margin: 0; font-size: 0.85rem; }
    the well will take a file, not the edge of the well. */
 .compare .drop {
   width: 100%;
-  min-height: 4rem;
+  min-height: 8rem;
   display: grid;
   place-items: center;
   padding: 8px;
