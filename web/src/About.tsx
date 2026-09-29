@@ -32,9 +32,9 @@ export function About({ works }: { works: number }) {
             <h2>Minerva</h2>
 
             <p>
-              {works.toLocaleString()} public-domain works from the Art
-              Institute of Chicago, laid out so that works which look alike
-              sit near each other.
+              {works.toLocaleString()} works in the public domain from the Art
+              Institute of Chicago, laid out so that works which look alike sit
+              near each other.
             </p>
 
             <h3>The map</h3>
@@ -43,47 +43,55 @@ export function About({ works }: { works: number }) {
               vector decides where it sits. Under <b>Similarity</b> it is the
               only thing deciding: there are no regions, and being next to
               something means the two look alike. Under <b>Period</b>,{" "}
-              <b>Place</b> and <b>Style</b> a work's group picks its region
-              and the vector places it inside — so a work near the edge of
-              its region resembles what is over the border.
+              <b>Place</b> and <b>Style</b> a work's group picks its region and
+              the vector places it inside, so a work near the edge of its
+              region resembles what lies over the border.
             </p>
 
             <h3>Where the labels come from</h3>
             <p>
-              Date and place are the museum's own. <b>Style is not.</b> The
-              museum's style field is mostly centuries and cultures rather
-              than movements, and fewer than a fifth of works carry one, so
-              the 42 style labels here are predicted by a linear classifier
-              trained on{" "}
+              Date and place come from the museum's own catalogue. Style comes
+              from a model. The museum's style field holds mostly centuries and
+              cultures rather than movements, and fewer than a fifth of works
+              carry one, so the 42 style labels here are predicted by a linear
+              classifier trained on{" "}
               <a href="https://huggingface.co/datasets/Artificio/WikiArt"
                  target="_blank" rel="noreferrer">Artificio/WikiArt</a>{" "}
-              and applied to this collection. Scored with every painter in
-              the test fold unseen during training, it is right 49% of the
-              time across those 42 labels. Treat a style as a guess with a
-              number attached, and the confidence beside it as that guess's
-              own estimate. The map pools the smallest labels, so it shows
-              28 regions rather than 42.
+              and applied to this collection. Scored with every painter in the
+              test fold unseen during training, it gets 49% right. Treat a
+              style as a guess with a number attached, and the confidence
+              beside it as that guess's own estimate. The map pools the
+              smallest labels, so it shows 23 regions rather than 42.
             </p>
             <p>
-              Works the classifier has no label for are marked{" "}
-              <i>outside the taxonomy</i> rather than given the nearest
-              label that fits badly.
+              A movement can only be predicted for a work made after it began.
+              Anything dated earlier falls through to the model's next choice,
+              which lifted about 2,400 labels the calendar ruled out.
+            </p>
+            <p>
+              Works from traditions the classifier covers poorly, mostly the
+              Indian subcontinent, the Himalaya and Mesoamerica, are marked{" "}
+              <i>outside the taxonomy</i> and held apart on the map, rather
+              than given the nearest label that fits badly.
             </p>
 
             <h3>Your own picture</h3>
             <p>
-              Encoded in your browser by the same model, compared against
-              all {works.toLocaleString()} vectors, and never uploaded
-              anywhere.
+              Encoded in your browser by the same model and compared against
+              all {works.toLocaleString()} vectors. It stays on your machine.
             </p>
 
             <h3>Credits</h3>
+            <p>
+              Made by Joshua.{" "}
+              <a href="https://github.com/hoptched/" target="_blank"
+                 rel="noreferrer">github.com/hoptched</a>
+            </p>
             <p className="muted small">
               Images and metadata from the{" "}
               <a href="https://api.artic.edu/docs/" target="_blank"
-                 rel="noreferrer">Art Institute of Chicago</a>, used under
-              CC0. Style training data from WikiArt, used for training only
-              and not redistributed here.
+                 rel="noreferrer">Art Institute of Chicago</a>, used under CC0.
+              Style training data from WikiArt, used for training only.
             </p>
           </div>
         </div>
