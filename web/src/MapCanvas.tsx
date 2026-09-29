@@ -50,10 +50,8 @@ const MIP_TILE = 16;
  *  selected work has, so close in it lifts a little and far out it comes
  *  up to a size worth looking at. */
 const HOVER_GROW = 1.45;
-/** How long it takes to bring a clicked work to the middle. Shorter than
- *  a flight, because nothing about the distance changes: it is a nudge
- *  across the screen rather than a journey. */
-const CENTRE_MS = 420;
+/** How long it takes to bring a clicked work to the middle. */
+const CENTRE_MS = 720;
 /** How small the selected work is allowed to get, in CSS pixels. Zoomed
  *  out it is one speck among twenty thousand, and the thing you just
  *  chose should not be the hardest thing on the map to find. */
@@ -175,6 +173,12 @@ function inside(poly: [number, number][], x: number, y: number) {
 
 const easeInOut = (t: number) =>
   t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+/** For a move that answers a click rather than crossing the map. It
+ *  leaves at once and spends the rest of its time settling, which is
+ *  what makes a short move read as smooth: an ease that accelerates
+ *  first has to do all of its travelling in the middle, and over a
+ *  couple of hundred pixels that middle is a lurch. */
+const easeOut = (t: number) => 1 - Math.pow(1 - t, 4);
 
 export interface Focus { x: number; y: number; r: number; key: number }
 
@@ -265,7 +269,8 @@ export function MapCanvas({
   const selRectRef = useRef<
     { x: number; y: number; w: number; h: number } | null>(null);
   const flyRef = useRef<
-    { from: View; to: View; start: number; ms: number } | null>(null);
+    { from: View; to: View; start: number; ms: number;
+      ease?: (t: number) => number } | null>(null);
 
   const { works, layouts, atlasMeta, sheets, mips, slots, facets, hires }
     = bundle;
@@ -451,7 +456,7 @@ export function MapCanvas({
       const fly = flyRef.current;
       if (fly) {
         const p = Math.min(1, (performance.now() - fly.start) / fly.ms);
-        const e = easeInOut(p);
+        const e = (fly.ease ?? easeInOut)(p);
         const v = viewRef.current;
         v.x = fly.from.x + (fly.to.x - fly.from.x) * e;
         v.y = fly.from.y + (fly.to.y - fly.from.y) * e;
@@ -1251,6 +1256,7 @@ export function MapCanvas({
           },
           start: performance.now(),
           ms: CENTRE_MS,
+          ease: easeOut,
         };
         flownWith.current = insetRef.current;
       }
