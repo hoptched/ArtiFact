@@ -389,21 +389,16 @@ dd { margin: 0; font-size: 0.85rem; }
   .sidebar {
     /* As tall as what it holds, rather than a share of the screen. A
        fifth was a guess, and a guess leaves either a gap under the last
-       key or a scroll bar beside it. */
+       key or a scroll bar beside it. The rows keep the full width they
+       had; only the height gives way. */
     flex: 0 0 auto;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px 8px;
+    gap: 6px;
     padding: 7px 12px 6px;
     border-right: 0;
     border-bottom: 1px solid var(--bar-edge);
   }
-  /* The mark sits in the row with the keys rather than above them. */
-  .sidebar header { flex: 0 0 auto; }
-  .sidebar > * { margin: 0; }
   /* A mark rather than a banner at this size. */
-  .sidebar header h1 a { width: 5.5rem; }
+  .sidebar header h1 a { width: 30%; min-width: 96px; }
   .sidebar header p { display: none; }
   /* Both section headings go: four labelled keys and a button say what
      they are without a caption over them. */
@@ -443,8 +438,7 @@ dd { margin: 0; font-size: 0.85rem; }
 
   .actions { gap: 5px; }
   .sidebar .reset { padding: 6px 8px; font-size: 0.74rem; }
-  /* Pushed to the end of whatever row it lands in. */
-  .about-link { margin-top: 0; margin-left: auto; font-size: 0.68rem; }
+  .about-link { margin-top: 0; font-size: 0.68rem; }
 
   /* Over the whole screen, not a drawer at the foot of it. A work is the
      thing you came for, and half a phone is not enough of one. */
