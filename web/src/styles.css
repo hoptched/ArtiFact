@@ -109,7 +109,8 @@ body {
 
 .sidebar h2 {
   margin: 0 0 7px;
-  font-size: 0.66rem;
+  font-size: 0.99rem;    /* half again over the 0.66rem they shared with
+                            the panel's own headings */
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.12em;
@@ -499,7 +500,7 @@ dd { margin: 0; font-size: 0.85rem; }
   border: 0;
   padding: 2px 0;
   font: inherit;
-  font-size: 0.78rem;
+  font-size: 1.17rem;
   color: var(--muted);
   cursor: pointer;
   border-bottom: 1px dotted rgba(255, 255, 255, 0.25);
