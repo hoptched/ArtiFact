@@ -9,7 +9,7 @@ def main() -> None:
     config = Config.load()
     config.paths.ensure()
 
-    print("ArtiFact — resolved config\n")
+    print("Minerva — resolved config\n")
     print(f"  root            {ROOT}")
     print(f"  corpus          {config.corpus.source}, cap {config.corpus.max_works:,} works")
     print(f"  images          {config.corpus.iiif_width}px via IIIF, never stored")

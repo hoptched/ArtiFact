@@ -146,7 +146,7 @@ def main() -> None:
         print(f"{len(seen):,} works already harvested, resuming after page "
               f"{state.last_page}\n")
 
-    headers = {"AIC-User-Agent": "ArtiFact personal project"}
+    headers = {"AIC-User-Agent": "Minerva personal project"}
     written = 0
     kinds: Counter[str] = Counter()
 

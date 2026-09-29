@@ -118,7 +118,7 @@ def main() -> None:
     session = None
     if not warm:
         import httpx
-        session = httpx.Client(headers={"User-Agent": "ArtiFact/0.1"},
+        session = httpx.Client(headers={"User-Agent": "Minerva/0.1"},
                                follow_redirects=True)
 
     def load(artwork_id: int):

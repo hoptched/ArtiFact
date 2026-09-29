@@ -1,4 +1,4 @@
-# ArtiFact
+# Minerva
 
 Label artworks by time period, location and art style, and make them browsable.
 

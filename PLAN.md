@@ -1,10 +1,10 @@
-# ArtiFact: Build Tracker
+# Minerva: Build Tracker
 
 As of 2026-09-22. Living version: https://claude.ai/code/artifact/7102f034-87f7-4100-b6e0-406c2a2b376f
 
 ## The project in one page
 
-ArtiFact labels artworks by time period, location and art style, then makes that browsable on a static website. Two systems meet at a file boundary: an offline Python pipeline that produces frozen data artifacts, and a website that reads only those artifacts. The website never imports torch.
+Minerva labels artworks by time period, location and art style, then makes that browsable on a static website. Two systems meet at a file boundary: an offline Python pipeline that produces frozen data artifacts, and a website that reads only those artifacts. The website never imports torch.
 
 The three axes are not equally hard, and that asymmetry drives every choice below.
 
@@ -68,7 +68,7 @@ Run the expensive step once, cache the vectors, and a head trains in seconds on 
 
 Rejected: end-to-end ResNet-50 or ViT fine-tuning (GPU hours, one softmax, rigid), CLIP zero-shot alone (weaker, no taxonomy control), DINOv2 (great features, no text alignment).
 
-**On the CNN baseline:** the original `Art-CNN` name implied an architecture this design does not use; renaming to ArtiFact settles that. The baseline is still worth having — train a ResNet-50 on the same WikiArt split in D4 and report both numbers. That comparison is the most interesting paragraph in any eventual writeup — keep it as a baseline, not the product.
+**On the CNN baseline:** the original `Art-CNN` name implied an architecture this design does not use; the rename settled that, by way of ArtiFact and then Minerva. The baseline is still worth having — train a ResNet-50 on the same WikiArt split in D4 and report both numbers. That comparison is the most interesting paragraph in any eventual writeup — keep it as a baseline, not the product.
 
 ## Architecture
 

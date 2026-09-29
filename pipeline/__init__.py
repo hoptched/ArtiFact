@@ -1,4 +1,4 @@
-"""ArtiFact pipeline: harvest, normalize, embed, classify, build site artifacts."""
+"""Minerva pipeline: harvest, normalize, embed, classify, build site artifacts."""
 
 from pipeline.config import Config
 

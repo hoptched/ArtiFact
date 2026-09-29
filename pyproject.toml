@@ -1,5 +1,5 @@
 [project]
-name = "artifact"
+name = "minerva"
 version = "0.1.0"
 description = "Label artworks by period, location and style, and make them browsable"
 requires-python = ">=3.11"

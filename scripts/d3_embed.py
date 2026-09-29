@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """D3: encode the AIC corpus with a frozen CLIP image tower.
 
-Standalone by design. This file imports nothing from the ArtiFact package
+Standalone by design. This file imports nothing from the Minerva package
 and reads no config.yaml, so it can be copied to a machine that has never
 seen the repo. Its only inputs are corpus.jsonl and the CLI flags below.
 
@@ -227,7 +227,7 @@ def main() -> None:
         shard_n += 1
         pending_ids, pending_vecs, pending_cols, pending_dims = [], [], [], []
 
-    headers = {"User-Agent": "ArtiFact/0.1 (personal project)"}
+    headers = {"User-Agent": "Minerva/0.1 (personal project)"}
     with httpx.Client(headers=headers, follow_redirects=True) as session, \
             ThreadPoolExecutor(max_workers=args.workers) as pool:
         for start in range(0, len(todo), args.batch_size):
