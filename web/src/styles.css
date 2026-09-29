@@ -15,16 +15,13 @@
   /* The wordmark only. Swap this line for a licensed Orpheus. */
   --font-display: "Cormorant Garamond", "Orpheus Pro", Georgia, serif;
   --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-pixel: "Silkscreen", ui-monospace, monospace;
-  /* The reference sprite's four values — a highlight, a face, a shadow
-     and an edge — kept as relationships and restated in the bar's own
-     grey. Borrowed literally, the blue was a button from another
-     program sitting on this one's rail. What makes it read as pixel art
-     is the flat bands and the stepped corners, not the hue. */
-  --pix-hi: #5e5e63;
-  --pix-face: #4a4a4d;
-  --pix-lo: #333336;
-  --pix-edge: #232326;
+  /* Read off the reference: a flat face on a recessed tray, with a
+     near-black rim around the group. */
+  --key-face: #5b5b5b;
+  --key-face-lo: #4b4b4b;
+  --key-tray: #303030;
+  --key-rim: #121212;
+  --key-line: #262626;
   color-scheme: dark;
 }
 
@@ -111,64 +108,60 @@ body {
   color: var(--muted);
 }
 
-.switcher { display: flex; flex-wrap: wrap; gap: 5px; }
+/* A tray of keys rather than separate buttons: the group is one recessed
+   strip with a near-black rim, and the keys sit in it a hair apart. */
+.switcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  padding: 4px;
+  background: var(--key-tray);
+  border: 2px solid var(--key-rim);
+  border-radius: 9px;
+}
 
-/* Drawn rather than drawn from a sprite.
-   The reference was a compressed screenshot — 12,643 colours in a
-   378x147 image, and no integer pixel grid left in it — so blowing it up
-   would have magnified the compression, not the art. Under the mush it
-   is four flat colours and three bands: a dark outline, a light band
-   below the top edge, a darker one above the bottom. That is a shape CSS
-   can state exactly, at any size, behind labels of any length, with no
-   file to ship and nothing to go blurry.
-
-   The inset shadows are listed topmost first, so the outline is laid over
-   the ends of both bands and leaves each three pixels wide inside it. The
-   clip-path takes the corners off in steps of three, which is what stops
-   it reading as a rounded rectangle in a blue coat. */
 .switcher button,
 .sidebar .reset {
-  --face: var(--pix-face);
-  --band-hi: var(--pix-hi);
-  --band-lo: var(--pix-lo);
-  background: var(--face);
-  border: 0;
-  border-radius: 0;
+  flex: 1 1 auto;
+  background: linear-gradient(var(--key-face) 62%, var(--key-face-lo));
+  border: 1px solid var(--key-line);
+  border-radius: 5px;
+  /* One lit pixel along the top edge and one dark along the bottom: the
+     whole of the relief, and all the reference has. */
   box-shadow:
-    inset 0 0 0 3px var(--pix-edge),
-    inset 0 6px 0 var(--band-hi),
-    inset 0 -7px 0 var(--band-lo);
-  clip-path: polygon(
-    6px 0, calc(100% - 6px) 0, calc(100% - 6px) 3px, calc(100% - 3px) 3px,
-    calc(100% - 3px) 6px, 100% 6px, 100% calc(100% - 6px),
-    calc(100% - 3px) calc(100% - 6px), calc(100% - 3px) calc(100% - 3px),
-    calc(100% - 6px) calc(100% - 3px), calc(100% - 6px) 100%, 6px 100%,
-    6px calc(100% - 3px), 3px calc(100% - 3px), 3px calc(100% - 6px),
-    0 calc(100% - 6px), 0 6px, 3px 6px, 3px 3px, 6px 3px);
-  color: var(--ink);
-  font-family: var(--font-pixel);
-  font-size: 0.72rem;
-  letter-spacing: 0.02em;
-  padding: 10px 13px 11px;
+    inset 0 1px 0 rgba(255, 255, 255, 0.11),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.30);
+  color: #d9d9d9;
+  font: inherit;
+  font-size: 0.82rem;
+  letter-spacing: 0.01em;
+  padding: 7px 12px;
   cursor: pointer;
-  line-height: 1;
+  line-height: 1.25;
 }
 .switcher button:hover,
-.sidebar .reset:hover { --face: #565659; --band-hi: #6b6b70; }
+.sidebar .reset:hover {
+  background: linear-gradient(#686868 62%, #575757);
+  color: #f0f0f0;
+}
 
-/* Pressed: the bands swap ends, so the face reads as pushed in rather
-   than as a differently coloured button. */
+/* Pressed reads as pushed into the tray: the relief inverts and the face
+   goes under the tray's own value rather than taking a colour. */
 .switcher button.on {
-  --face: #2c2c2f;
+  background: #3a3a3a;
+  border-color: #1d1d1d;
   box-shadow:
-    inset 0 0 0 3px var(--pix-edge),
-    inset 0 6px 0 #232326,
-    inset 0 -7px 0 #3a3a3e;
+    inset 0 2px 3px rgba(0, 0, 0, 0.55),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05);
   color: #fff;
 }
 
-/* Full width of the bar, and the same face as the grouping buttons. */
-.sidebar .reset { width: 100%; text-align: center; }
+/* Alone rather than in a tray, so it carries its own rim. */
+.sidebar .reset {
+  width: 100%;
+  text-align: center;
+  border-color: var(--key-rim);
+}
 
 .stage { position: relative; flex: 1 1 auto; min-width: 0; }
 
