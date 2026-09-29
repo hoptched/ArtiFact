@@ -16,12 +16,15 @@
   --font-display: "Cormorant Garamond", "Orpheus Pro", Georgia, serif;
   --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-pixel: "Silkscreen", ui-monospace, monospace;
-  /* Read off the reference sprite, which turned out to be four colours
-     under the compression: a highlight, a face, a shadow and an edge. */
-  --pix-hi: #deeef7;
-  --pix-face: #9fbbd0;
-  --pix-lo: #6c8ba2;
-  --pix-edge: #395265;
+  /* The reference sprite's four values — a highlight, a face, a shadow
+     and an edge — kept as relationships and restated in the bar's own
+     grey. Borrowed literally, the blue was a button from another
+     program sitting on this one's rail. What makes it read as pixel art
+     is the flat bands and the stepped corners, not the hue. */
+  --pix-hi: #5e5e63;
+  --pix-face: #4a4a4d;
+  --pix-lo: #333336;
+  --pix-edge: #232326;
   color-scheme: dark;
 }
 
@@ -142,7 +145,7 @@ body {
     calc(100% - 6px) calc(100% - 3px), calc(100% - 6px) 100%, 6px 100%,
     6px calc(100% - 3px), 3px calc(100% - 3px), 3px calc(100% - 6px),
     0 calc(100% - 6px), 0 6px, 3px 6px, 3px 3px, 6px 3px);
-  color: var(--pix-edge);
+  color: var(--ink);
   font-family: var(--font-pixel);
   font-size: 0.72rem;
   letter-spacing: 0.02em;
@@ -151,17 +154,17 @@ body {
   line-height: 1;
 }
 .switcher button:hover,
-.sidebar .reset:hover { --face: #b3cbdd; --band-hi: #eef7fd; }
+.sidebar .reset:hover { --face: #565659; --band-hi: #6b6b70; }
 
 /* Pressed: the bands swap ends, so the face reads as pushed in rather
    than as a differently coloured button. */
 .switcher button.on {
-  --face: #7fa3bd;
+  --face: #2c2c2f;
   box-shadow:
     inset 0 0 0 3px var(--pix-edge),
-    inset 0 6px 0 var(--pix-lo),
-    inset 0 -7px 0 #8fb0c7;
-  color: #21323f;
+    inset 0 6px 0 #232326,
+    inset 0 -7px 0 #3a3a3e;
+  color: #fff;
 }
 
 /* Full width of the bar, and the same face as the grouping buttons. */
