@@ -410,12 +410,14 @@ dd { margin: 0; font-size: 0.85rem; }
      a phone, where there is nothing to drag and the picker is the only
      way in. */
   .compare .drop {
-    /* A key, at a key's size: it takes its label rather than the width
-       of the bar, since it does one thing rather than being a place to
-       drop something into. */
-    display: inline-flex;
+    /* A key like the two below it, at twice their width, since they
+       share a row and this one has it to itself. Nothing is dropped into
+       it on a phone: there is nothing to drag, and the picker is the
+       only way in. */
+    display: flex;
     align-items: center;
-    width: auto;
+    justify-content: center;
+    width: 100%;
     min-height: 0;
     padding: 6px 10px;
     border-radius: 6px;
@@ -434,7 +436,9 @@ dd { margin: 0; font-size: 0.85rem; }
   }
   .compare .drop span { display: none; }
   .compare .drop::after { content: "Add a picture"; }
-  .compare .drop img { max-height: 2.2rem; }
+  /* No preview here. The key keeps its label while the model runs, and
+     the overlay over the map says what is happening. */
+  .compare .drop img { display: none; }
 
   .actions { gap: 5px; }
   .sidebar .reset { padding: 6px 8px; font-size: 0.74rem; }
