@@ -132,7 +132,6 @@ export default function App() {
           facet={facet}
           onFocus={flyTo}
           onPin={addPin}
-          onOpen={() => setOpenPin(pins.length - 1)}
         />
 
         <button

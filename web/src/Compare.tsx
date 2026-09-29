@@ -3,34 +3,30 @@ import type { Bundle } from "./useData";
 import type { CompareResult } from "./compare";
 import { Comparer, placeAmong } from "./compare";
 import type { Facet } from "./types";
-import { percent } from "./types";
 
 const comparer = new Comparer();
 
 export interface Pin { url: string; result: CompareResult }
 
 export function Compare({
-  bundle, facet, onFocus, onPin, onOpen,
+  bundle, facet, onFocus, onPin,
 }: {
   bundle: Bundle;
   facet: Facet;
   onFocus: (x: number, y: number) => void;
   onPin: (pin: Pin) => void;
-  onOpen: () => void;
 }) {
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
   // Held for the pin and the panel, which both draw from it, and shown
   // here only while the comparison runs.
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
-  const [result, setResult] = useState<CompareResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const run = useCallback(async (file: File) => {
     setError(null);
     setBusy(true);
-    setResult(null);
     const url = URL.createObjectURL(file);
     // Not revoked when the next picture arrives: the earlier ones stay
     // on the map and keep drawing from theirs.
@@ -39,7 +35,6 @@ export function Compare({
       await comparer.load(setStatus);
       setStatus("Looking…");
       const res = await comparer.compare(file);
-      setResult(res);
       onPin({ url, result: res });
       const layout = bundle.layouts.facets[facet];
       const at = placeAmong(
@@ -98,17 +93,6 @@ export function Compare({
       {status && <p className="muted small">{status}</p>}
       {error && <p className="muted small">Could not compare: {error}</p>}
 
-      {result && !status && (
-        <p className="verdict">
-          {result.style && (
-            <>
-              <b>{result.style.label}</b>{" "}
-              <span className="muted">{percent(result.style.confidence)}</span>
-            </>
-          )}
-          <button className="link" onClick={onOpen}>details</button>
-        </p>
-      )}
     </section>
   );
 }

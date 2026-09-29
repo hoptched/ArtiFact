@@ -485,26 +485,6 @@ dd { margin: 0; font-size: 0.85rem; }
 }
 .compare .drop:disabled { cursor: progress; }
 .compare .drop img { max-width: 100%; max-height: 5.5rem; display: block; }
-.compare .verdict {
-  margin: 7px 0 0;
-  font-size: 0.8rem;
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-}
-.compare .verdict b { color: var(--accent); font-weight: 600; }
-.compare .link {
-  margin-left: auto;
-  background: none;
-  border: none;
-  padding: 0;
-  color: var(--muted);
-  font: inherit;
-  font-size: 0.76rem;
-  text-decoration: underline;
-  cursor: pointer;
-}
-.compare .link:hover { color: var(--ink); }
 .compare .small { margin: 6px 0 0; }
 
 /* Pushed to the foot of the bar by the margin, so it sits in the corner
