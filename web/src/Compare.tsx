@@ -68,6 +68,9 @@ export function Compare({
           the slot made it look occupied rather than ready. */}
       <button
         className="drop"
+        // The heading above names it on screen; empty, it needs to name
+        // itself to anything not reading the page by eye.
+        aria-label="Drop an image here, or click to choose one"
         disabled={busy}
         onClick={() => inputRef.current?.click()}
         onDragOver={(e) => e.preventDefault()}
@@ -78,8 +81,7 @@ export function Compare({
         }}
       >
         {busy && objectUrl
-          ? <img src={objectUrl} alt="the picture being compared" />
-          : <span>Drop an image</span>}
+          && <img src={objectUrl} alt="the picture being compared" />}
       </button>
       <input
         ref={inputRef}
