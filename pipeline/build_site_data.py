@@ -85,26 +85,26 @@ def top_k_neighbors(vecs: np.ndarray, k: int) -> np.ndarray:
 
 
 def shown_date(row: dict) -> str:
-    """What the panel shows for a work's date.
+    """A year, or a span of years, and nothing else.
 
-    The museum writes "n.d." for about one work in six, and then gives a
-    start and an end year anyway: every one of the 4,391 that say nothing
-    has a range in the catalogue behind it. Showing the words rather than
-    the range told the reader less than the record holds, so the range is
-    shown wherever the display line carries no year of its own.
+    The museum writes dates as prose, and the prose takes every shape it
+    can: "1904", "c. 1797", "1770-1810", "1540/50", "n.d." for one work
+    in six. Read down a column of those, nothing lines up and the same
+    fact appears in four costumes.
 
-    Written with "to" rather than a dash, which is the house style for
-    this copy.
+    So the year range behind the wording is used instead, which every
+    work has: a single year when the two ends agree, and start-end when
+    they differ. What is lost is the museum's hedging, the "c." and the
+    slash, which the range already carries by being a range.
     """
-    display = (row.get("date_display") or "").strip()
-    if any(ch.isdigit() for ch in display):
-        return display
     start, end = row.get("date_start"), row.get("date_end")
     if start is None and end is None:
-        return display or "date unknown"
-    if start is None or end is None or start == end:
+        return (row.get("date_display") or "").strip() or "date unknown"
+    if start is None or end is None:
         return str(start if start is not None else end)
-    return f"{start} to {end}"
+    if start == end:
+        return str(start)
+    return f"{start}-{end}"
 
 
 def main() -> None:
