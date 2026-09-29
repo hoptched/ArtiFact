@@ -111,7 +111,7 @@ export function Detail({
             <button key={id} onClick={() => onSelect(i)} title={other.t}
                     style={{ background: other.k ?? undefined }}>
               <Thumb src={iiifUrl(facets.iiif, other.img, 200)}
-                     alt={other.t} />
+                     alt={other.t} bundle={bundle} index={i} />
             </button>
           );
         })}
