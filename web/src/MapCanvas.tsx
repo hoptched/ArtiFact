@@ -808,7 +808,7 @@ export function MapCanvas({
       // the works while doing it.
       const labelFade = Math.min(1, Math.max(0,
         (LABEL_MAX_SCALE - scale) / (LABEL_MAX_SCALE - LABEL_FADE_FROM)));
-      if (labelFade > 0 && !(rules && rules.length)) {
+      if (labelFade * fieldFade > 0 && !(rules && rules.length)) {
         const regions = layouts.facets[facet].regions;
         ctx.save();
         ctx.textAlign = "center";
@@ -818,11 +818,16 @@ export function MapCanvas({
         // no edge — it darkens what is under the letters just enough to
         // hold them. Set once for the whole pass: shadow state is sticky
         // on a context and would otherwise carry into the next frame.
-        ctx.shadowColor = "rgba(0, 0, 0, 0.6)";
-        ctx.shadowBlur = 7 * dpr;
+        ctx.shadowColor = "rgba(0, 0, 0, 0.72)";
+        ctx.shadowBlur = 9 * dpr;
         // Takes the shadow down with the letters, so the name thins out
         // whole rather than leaving its own shadow behind.
-        ctx.globalAlpha = labelFade;
+        //
+        // And in with the fields, when a grouping changes. A name is a
+        // claim about a region, so it should not be readable before the
+        // region it names has arrived: the works travel, then the colour
+        // comes up, and the name comes up with it.
+        ctx.globalAlpha = labelFade * fieldFade;
         for (const region of regions) {
           const px = (region.c[0] - vx) * s + cx;
           const py = (region.c[1] - vy) * s + cy;
