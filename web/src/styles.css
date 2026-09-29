@@ -21,7 +21,6 @@
   --key-top: #4a4a4a;
   --key-bottom: #3a3a3a;
   --key-side: #2b2b2b;
-  --key-tray: #262626;
   /* Grain, over the tray and the keys alike. Generated, so it costs a
      string rather than a file, and tiles at any size. */
   --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.35'/%3E%3C/svg%3E");
@@ -113,21 +112,17 @@ body {
   color: var(--muted);
 }
 
-/* A tray of keys. The group is one sunken strip and the keys stand in
-   it on solid sides, so pressing one is a travel rather than a change of
-   colour. Proportions are the reference's, taken down to bar size: a
-   44px key becomes a 0.78rem one and its 8px side becomes 4px. */
+/* Keys standing on the bar itself. The reference sank them into a tray;
+   here that tray was a dark well cut into a rail that is already a
+   surface, and the bar gained a hole rather than the keys gaining depth.
+   The keys keep their sides, which is where the depth was coming from.
+   Proportions are the reference's at bar size: a 44px key becomes a
+   0.78rem one and its 8px side becomes 4px. */
 .switcher {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
-  padding: 5px 5px 9px;
-  border-radius: 9px;
-  background: var(--noise), var(--key-tray);
-  background-blend-mode: overlay;
-  box-shadow:
-    inset 0 2px 5px rgba(0, 0, 0, 0.8),
-    0 1px 0 rgba(255, 255, 255, 0.08);
+  gap: 6px;
+  padding-bottom: 4px;    /* room for the sides to sit on */
 }
 
 .switcher button,
@@ -197,29 +192,14 @@ body {
     0 0 7px 1px rgba(61, 220, 74, 0.55);
 }
 
-/* Not a toggle and not in a tray, so it should not carry the weight of
-   one. Sized as the secondary thing it is: as wide as its label, with a
-   shallower side to match, and it travels only while held. */
+/* The same key as the others — it is one of the controls on the bar, not
+   a footnote to them. Only its width differs: it takes its label rather
+   than a share of a row, since it is not one of a set. */
 .sidebar .reset {
   width: auto;
   flex: 0 0 auto;
   align-self: flex-start;
-  font-size: 0.68rem;
-  padding: 4px 9px;
-  border-radius: 5px;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.13),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.4),
-    0 3px 0 var(--key-side),
-    0 4px 3px rgba(0, 0, 0, 0.55);
-}
-.sidebar .reset:active {
-  top: 2px;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.4),
-    0 1px 0 var(--key-side),
-    0 2px 2px rgba(0, 0, 0, 0.55);
+  margin-bottom: 4px;     /* its side, again */
 }
 
 .stage { position: relative; flex: 1 1 auto; min-width: 0; }
