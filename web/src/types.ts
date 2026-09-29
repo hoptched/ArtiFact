@@ -39,6 +39,9 @@ export interface Layouts {
     grid?: { x: number; label: string }[];
     regions: Region[];
     region_of: string[];
+    /** Where a style label ends up once the thin ones are pooled.
+     *  Twelve of the 34 the head can name have no region of their own. */
+    label_region?: Record<string, string>;
   }>;
 }
 

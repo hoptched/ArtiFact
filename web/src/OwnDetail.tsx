@@ -56,6 +56,18 @@ export function OwnDetail({
               <span className="conf">
                 <em>predicted · {percent(result.style.confidence)}</em>
               </span>
+              {/* Where the map puts it, when that is somewhere else. A
+                  movement that began in 1920 has almost nothing in a
+                  collection that stops at 1900, so it shares a region
+                  with the other thin labels, and saying the style
+                  without saying that looked like a contradiction. */}
+              {(() => {
+                const at = bundle.layouts.facets.style.label_region?.[
+                  result.style.label];
+                return at && at !== result.style.label
+                  ? <span className="muted note-foot">shown in {at}</span>
+                  : null;
+              })()}
             </>
           ) : <span className="withheld">not predicted</span>}
         </dd>

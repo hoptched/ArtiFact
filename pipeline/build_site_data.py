@@ -276,6 +276,16 @@ def main() -> None:
                 for name in sorted(sizes, key=lambda k: -sizes[k])
                 if name in centres],
             "region_of": labels,
+            # Where a style label ends up once the small ones have been
+            # pooled. Art Deco has four works in this corpus and no region
+            # of its own; they sit in Other styles. Without this the site
+            # could name a style it had nowhere to put, which is what an
+            # uploaded picture does when the model reads it as one of the
+            # rare ones.
+            "label_region": ({
+                (w["s"] or OUTSIDE_TAXONOMY): r
+                for w, r in zip(works, labels)
+            } if facet == "style" else {}),
             # Per facet: a ribbon carries a different tile size than a disc.
             "work_radius": round(float(tile), 6),
             # Century boundaries, for the timeline to rule itself against.

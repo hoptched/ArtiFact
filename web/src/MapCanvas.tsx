@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildFields } from "./regionFields";
 import type { Bundle } from "./useData";
-import type { Facet } from "./types";
+import type { Facet, Layouts } from "./types";
 import { ImageCache, TIER2_MIN_PX } from "./imageCache";
 import { HiResAtlas } from "./hiresAtlas";
 import { placeAmong } from "./compare";
@@ -146,6 +146,16 @@ function buildGrid(pts: Float32Array): Grid | null {
   const cursor = start.slice(0, nx * ny);
   for (let i = 0; i < n; i++) items[cursor[cellOf(i)]++] = i;
   return { x0, y0, cw, ch, nx, ny, start, items };
+}
+
+/** The region a predicted style belongs to. Thin labels share one, and a
+ *  label the corpus never uses at all is thin by definition, so it goes
+ *  the same way. */
+function styleRegion(layouts: Layouts, style: string | null): string | null {
+  if (!style) return null;
+  const map = layouts.facets.style.label_region;
+  if (!map) return style;
+  return map[style] ?? map["Other styles"] ?? null;
 }
 
 /** Ray casting, in the map's own 0..1 space so no per-frame screen copy
@@ -728,7 +738,15 @@ export function MapCanvas({
           // Only where the regions are styles. Under place or period the
           // picture has no claim of its own to make, so its neighbours
           // speak for it.
-          facet === "style" ? p.style : null,
+          //
+          // Through the pooling, not straight: twelve of the labels the
+          // model can name have no region, because a movement that began
+          // in 1920 has almost nothing in a corpus that stops at 1900 and
+          // its few works share one region with the other thin ones. Used
+          // raw, the name matched no region, the neighbours were fallen
+          // back on, and the map put a picture called Social Realism in
+          // Romanticism.
+          facet === "style" ? styleRegion(layouts, p.style) : null,
         );
         if (!at) continue;
         const x = (at[0] - vx) * s + cx;
