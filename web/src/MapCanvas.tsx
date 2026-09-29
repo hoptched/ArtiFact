@@ -1106,12 +1106,12 @@ export function MapCanvas({
         hoverRef.current = best;
       }
       // And the work itself, which is lifted under the cursor the way a
-      // selected one is. Only close enough in for aiming at one to be a
-      // gesture anyone can perform: out where tiles are specks the
-      // nearest is whatever the cursor happened to land beside.
-      const tilePx = radius * 2 * view.scale;
-      hoverWorkRef.current =
-        tilePx >= WORK_CLICK_MIN_PX ? workNear(wx, wy) : -1;
+      // selected one is. At every zoom: out where tiles are specks it is
+      // the only way to see one without going there, which is more use
+      // than it is close in, not less. The reach is a fixed distance on
+      // screen, so what lifts is always whatever is nearest the cursor
+      // rather than whatever the zoom has made big enough to hit.
+      hoverWorkRef.current = workNear(wx, wy);
       canvas.style.cursor =
         best || hoverWorkRef.current >= 0 ? "pointer" : "grab";
       return;
