@@ -81,17 +81,18 @@ export function About({ works }: { works: number }) {
               all {works.toLocaleString()} vectors. It stays on your machine.
             </p>
 
-            <h3>Credits</h3>
-            <p>
-              Made by Joshua.{" "}
-              <a href="https://github.com/hoptched/" target="_blank"
-                 rel="noreferrer">github.com/hoptched</a>
-            </p>
-            <p className="muted small">
+            {/* The heading goes, its gap stays: the credits still want
+                separating from the section above them. */}
+            <p className="muted small credits">
               Images and metadata from the{" "}
               <a href="https://api.artic.edu/docs/" target="_blank"
                  rel="noreferrer">Art Institute of Chicago</a>, used under CC0.
               Style training data from WikiArt, used for training only.
+            </p>
+            <p className="signoff">
+              made by{" "}
+              <a href="https://github.com/hoptched/" target="_blank"
+                 rel="noreferrer">joshua soo</a> 🐻
             </p>
           </div>
         </div>

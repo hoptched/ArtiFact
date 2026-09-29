@@ -555,6 +555,11 @@ dd { margin: 0; font-size: 0.85rem; }
 }
 .about p { margin: 0 0 9px; font-size: 0.86rem; line-height: 1.6; }
 .about a { color: var(--accent); }
+/* Standing in for the heading that used to open the credits, so the
+   block keeps its distance from the section above. */
+.about .credits { margin-top: 30px; }
+.about .signoff { margin: 10px 0 0; }
+
 .about .close {
   position: absolute;
   top: 10px;
