@@ -5,6 +5,30 @@ import type { Facet } from "./types";
 import { ImageCache, TIER2_MIN_PX } from "./imageCache";
 import { HiResAtlas } from "./hiresAtlas";
 import { placeAmong } from "./compare";
+import texSimilarity from "./tex/similarity.png";
+import texPeriod from "./tex/period.png";
+import texCountry from "./tex/country.png";
+import texStyle from "./tex/style.png";
+
+/**
+ * A ground for each grouping.
+ *
+ * The four came in at wildly different weights — one half solid black,
+ * one pale beige line work — so they are greyed, which drops the colour,
+ * and then each is scaled until all four carry the same mean ink. The
+ * pattern changes with the grouping; how loudly it speaks does not.
+ *
+ * Fixed to the viewport rather than to the map. Tied to map space it
+ * would slide under the works and grow with the zoom, which reads as
+ * another layer of the data; held still it is what the map is drawn on.
+ */
+const GROUND: Record<Facet, string> = {
+  similarity: texSimilarity,
+  period: texPeriod,
+  country: texCountry,
+  style: texStyle,
+};
+const GROUND_ALPHA = 0.05;
 
 interface View { x: number; y: number; scale: number }
 
@@ -170,6 +194,11 @@ export function MapCanvas({
   const fieldFadeRef = useRef<number | null>(0);
   const dragRef = useRef<{ x: number; y: number; moved: boolean } | null>(null);
   const hiWantedRef = useRef<Set<number>>(new Set());
+  // The ground tiles, decoded once and kept. A pattern is rebuilt only
+  // when the facet or the pixel ratio changes, not per frame.
+  const groundRef = useRef<Partial<Record<Facet, HTMLImageElement>>>({});
+  const patternRef = useRef<{ facet: Facet; dpr: number;
+                              pattern: CanvasPattern } | null>(null);
   // Which work wears the highlight. A ref rather than a dependency of the
   // render effect: selecting is the most common thing anyone does here,
   // and it changes one rectangle, not the loop that draws the map.
@@ -213,6 +242,20 @@ export function MapCanvas({
   // animating the works are somewhere between two layouts, so the frame
   // falls back to the full scan for those few hundred milliseconds
   // rather than querying an index that no longer describes them.
+  // All four grounds up front. They are a few tens of kilobytes between
+  // them and switching groupings should not wait on one.
+  useEffect(() => {
+    let live = true;
+    for (const [name, src] of Object.entries(GROUND)) {
+      const img = new Image();
+      img.onload = () => {
+        if (live) groundRef.current[name as Facet] = img;
+      };
+      img.src = src;
+    }
+    return () => { live = false; };
+  }, []);
+
   const gridIndex = useMemo(
     () => buildGrid(flatten(facet)), [flatten, facet]);
 
@@ -359,6 +402,29 @@ export function MapCanvas({
 
       ctx.fillStyle = "#0d0d0f";
       ctx.fillRect(0, 0, w, h);
+
+      // The grouping's own ground, over the flat fill and under
+      // everything else.
+      const ground = groundRef.current[facet];
+      if (ground && ground.complete && ground.naturalWidth) {
+        const held = patternRef.current;
+        if (!held || held.facet !== facet || held.dpr !== dpr) {
+          const pattern = ctx.createPattern(ground, "repeat");
+          if (pattern) {
+            // Scaled by the pixel ratio, or the tile comes out half size
+            // on a dense screen and twice as busy as it was drawn.
+            pattern.setTransform(new DOMMatrix().scale(dpr));
+            patternRef.current = { facet, dpr, pattern };
+          }
+        }
+        const ready = patternRef.current;
+        if (ready && ready.facet === facet) {
+          ctx.globalAlpha = GROUND_ALPHA;
+          ctx.fillStyle = ready.pattern;
+          ctx.fillRect(0, 0, w, h);
+          ctx.globalAlpha = 1;
+        }
+      }
 
       // Century rules, behind everything. Recessive: they are a scale to
       // read against, not a thing to look at.
