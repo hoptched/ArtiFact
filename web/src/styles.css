@@ -8,7 +8,6 @@
   --btn: #4a4a4d;
   --btn-hover: #545457;
   --btn-line: #5c5c60;
-  --btn-top: rgba(255, 255, 255, 0.09);
   --line: #2a2a31;
   --ink: #ece9e4;
   --muted: #a6a29b;
@@ -16,6 +15,13 @@
   /* The wordmark only. Swap this line for a licensed Orpheus. */
   --font-display: "Cormorant Garamond", "Orpheus Pro", Georgia, serif;
   --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-pixel: "Silkscreen", ui-monospace, monospace;
+  /* Read off the reference sprite, which turned out to be four colours
+     under the compression: a highlight, a face, a shadow and an edge. */
+  --pix-hi: #deeef7;
+  --pix-face: #9fbbd0;
+  --pix-lo: #6c8ba2;
+  --pix-edge: #395265;
   color-scheme: dark;
 }
 
@@ -104,58 +110,62 @@ body {
 
 .switcher { display: flex; flex-wrap: wrap; gap: 5px; }
 
-/* Buttons sit slightly proud of the bar: a lighter face, a hairline edge,
-   and a single highlighted pixel along the top. */
+/* Drawn rather than drawn from a sprite.
+   The reference was a compressed screenshot — 12,643 colours in a
+   378x147 image, and no integer pixel grid left in it — so blowing it up
+   would have magnified the compression, not the art. Under the mush it
+   is four flat colours and three bands: a dark outline, a light band
+   below the top edge, a darker one above the bottom. That is a shape CSS
+   can state exactly, at any size, behind labels of any length, with no
+   file to ship and nothing to go blurry.
+
+   The inset shadows are listed topmost first, so the outline is laid over
+   the ends of both bands and leaves each three pixels wide inside it. The
+   clip-path takes the corners off in steps of three, which is what stops
+   it reading as a rounded rectangle in a blue coat. */
 .switcher button,
 .sidebar .reset {
-  background: var(--btn);
-  border: 1px solid var(--btn-line);
-  box-shadow: inset 0 1px 0 var(--btn-top);
-  color: var(--ink);
-  font: inherit;
-  font-size: 0.8rem;
-  padding: 4px 11px;
-  border-radius: 4px;
+  --face: var(--pix-face);
+  --band-hi: var(--pix-hi);
+  --band-lo: var(--pix-lo);
+  background: var(--face);
+  border: 0;
+  border-radius: 0;
+  box-shadow:
+    inset 0 0 0 3px var(--pix-edge),
+    inset 0 6px 0 var(--band-hi),
+    inset 0 -7px 0 var(--band-lo);
+  clip-path: polygon(
+    6px 0, calc(100% - 6px) 0, calc(100% - 6px) 3px, calc(100% - 3px) 3px,
+    calc(100% - 3px) 6px, 100% 6px, 100% calc(100% - 6px),
+    calc(100% - 3px) calc(100% - 6px), calc(100% - 3px) calc(100% - 3px),
+    calc(100% - 6px) calc(100% - 3px), calc(100% - 6px) 100%, 6px 100%,
+    6px calc(100% - 3px), 3px calc(100% - 3px), 3px calc(100% - 6px),
+    0 calc(100% - 6px), 0 6px, 3px 6px, 3px 3px, 6px 3px);
+  color: var(--pix-edge);
+  font-family: var(--font-pixel);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  padding: 10px 13px 11px;
   cursor: pointer;
-  line-height: 1.5;
+  line-height: 1;
 }
 .switcher button:hover,
-.sidebar .reset:hover { background: var(--btn-hover); }
+.sidebar .reset:hover { --face: #b3cbdd; --band-hi: #eef7fd; }
 
-/* Pressed, not coloured: the bar has no accent of its own. */
+/* Pressed: the bands swap ends, so the face reads as pushed in rather
+   than as a differently coloured button. */
 .switcher button.on {
-  background: #2f2f31;
-  border-color: #262628;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45);
-  color: #fff;
-  font-weight: 600;
+  --face: #7fa3bd;
+  box-shadow:
+    inset 0 0 0 3px var(--pix-edge),
+    inset 0 6px 0 var(--pix-lo),
+    inset 0 -7px 0 #8fb0c7;
+  color: #21323f;
 }
 
-.sidebar .reset {
-  background: var(--btn);
-  border: 1px solid var(--btn-line);
-  box-shadow: inset 0 1px 0 var(--btn-top);
-  color: var(--ink);
-  font: inherit;
-  font-size: 0.8rem;
-  padding: 4px 11px;
-  border-radius: 4px;
-  cursor: pointer;
-  line-height: 1.5;
-}
-.switcher button:hover,
-.sidebar .reset:hover { background: var(--btn-hover); }
-
-/* Pressed, not coloured: the bar has no accent of its own. */
-.switcher button.on {
-  background: #2f2f31;
-  border-color: #262628;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45);
-  color: #fff;
-  font-weight: 600;
-}
-
-.sidebar .reset { text-align: center; padding: 6px; }
+/* Full width of the bar, and the same face as the grouping buttons. */
+.sidebar .reset { width: 100%; text-align: center; }
 
 .stage { position: relative; flex: 1 1 auto; min-width: 0; }
 
@@ -300,9 +310,12 @@ dd { margin: 0; font-size: 0.85rem; }
   position: absolute; inset: 0;
   width: 100%; height: 100%; display: block;
 }
-.similar img { position: relative; }
+
 .similar button:hover { border-color: var(--accent); }
-.similar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.similar img {
+  position: relative;      /* over the atlas cell behind it */
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
 
 @media (max-width: 700px) {
   .detail { width: 100%; height: 70%; top: auto; bottom: 0; }
