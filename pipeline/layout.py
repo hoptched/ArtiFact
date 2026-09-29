@@ -210,6 +210,20 @@ def facet_values(works: list[dict], facet: str) -> list[str]:
     raise ValueError(f"unknown facet {facet!r}")
 
 
+# The catch-all is not a style, and it is not placed like one. Its works
+# are set aside by country — India, Tibet, Mexico, Peru and the rest that
+# the taxonomy has no class for — so what they share is a rule, not an
+# appearance. Averaging a Mexican retablo, a Mughal miniature and a
+# Tibetan thangka gives a vector that means nothing and lands in the
+# middle of the map, where it sat over Persian & Ottoman: two regions
+# whose works look nothing alike, drawn on top of one another.
+#
+# So it is held out of the placement and parked past the edge instead,
+# which is what it is: a margin, not a neighbourhood.
+SET_ASIDE = "Outside the taxonomy"
+SET_ASIDE_GAP = 1.22
+
+
 def region_centres(vecs: np.ndarray, labels: list[str]) -> dict[str, np.ndarray]:
     """Place each region by how its works look, not by its name.
 
@@ -217,6 +231,9 @@ def region_centres(vecs: np.ndarray, labels: list[str]) -> dict[str, np.ndarray]
     makes a boundary between two regions meaningful.
     """
     names = sorted(set(labels))
+    aside = SET_ASIDE if SET_ASIDE in names and len(names) > 2 else None
+    if aside:
+        names = [n for n in names if n != aside]
     arr = np.array(labels)
     means = np.vstack([vecs[arr == n].mean(axis=0) for n in names])
     means /= np.linalg.norm(means, axis=1, keepdims=True)
@@ -243,7 +260,13 @@ def region_centres(vecs: np.ndarray, labels: list[str]) -> dict[str, np.ndarray]
     span = np.abs(xy).max()
     if span > 0:
         xy = xy / span * DISC_R
-    return dict(zip(names, xy))
+    out = dict(zip(names, xy))
+    if aside:
+        # Below the rest, clear of the furthest region, so it reads as
+        # held apart rather than as another neighbourhood.
+        reach = float(np.abs(xy[:, 1]).max()) if len(xy) else DISC_R
+        out[aside] = np.array([0.0, -reach * SET_ASIDE_GAP])
+    return out
 
 
 # Facets whose regions have a genuine one-dimensional order, laid out
