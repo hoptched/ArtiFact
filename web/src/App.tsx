@@ -5,6 +5,7 @@ import type { Pin } from "./Compare";
 import { Detail } from "./Detail";
 import { Compare } from "./Compare";
 import { OwnDetail } from "./OwnDetail";
+import { About } from "./About";
 import { useBundle } from "./useData";
 import type { Facet } from "./types";
 
@@ -132,6 +133,7 @@ export default function App() {
         >
           Whole map
         </button>
+        <About works={bundle.works.length} />
       </aside>
 
       <div className="stage">
