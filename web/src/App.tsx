@@ -189,22 +189,26 @@ export default function App() {
           </div>
         </section>
 
-        <Compare
-          bundle={bundle}
-          facet={facet}
-          onFocus={flyTo}
-          onPin={addPin}
-          onWorking={setWorking}
-        />
+        {/* The three that do rather than choose. Stacked on a rail, side
+            by side on a phone, where the height is the scarce thing. */}
+        <div className="controls">
+          <Compare
+            bundle={bundle}
+            facet={facet}
+            onFocus={flyTo}
+            onPin={addPin}
+            onWorking={setWorking}
+          />
 
-        <div className="actions">
-          <button
-            className="reset"
-            onClick={() => setFocus({ x: 0.5, y: 0.5, r: 0.5, key: Date.now() })}
-          >
-            Whole map
-          </button>
-          <button className="reset" onClick={surprise}>
+          <div className="actions">
+            <button
+              className="reset"
+              onClick={() =>
+                setFocus({ x: 0.5, y: 0.5, r: 0.5, key: Date.now() })}
+            >
+              Whole map
+            </button>
+            <button className="reset" onClick={surprise}>
             {/* One span per letter, so the colour can travel along the
                 word rather than changing it all at once. Wrapped in a
                 single element because the key is a flex row with a gap,
@@ -216,7 +220,8 @@ export default function App() {
                 </span>
               ))}
             </span>
-          </button>
+            </button>
+          </div>
         </div>
         <About works={bundle.works.length} />
       </aside>
