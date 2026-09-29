@@ -406,6 +406,12 @@ dd { margin: 0; font-size: 0.85rem; }
      a phone, where there is nothing to drag and the picker is the only
      way in. */
   .compare .drop {
+    /* A key, at a key's size: it takes its label rather than the width
+       of the bar, since it does one thing rather than being a place to
+       drop something into. */
+    display: inline-flex;
+    align-items: center;
+    width: auto;
     min-height: 0;
     padding: 6px 10px;
     border-radius: 6px;
