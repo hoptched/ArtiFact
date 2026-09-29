@@ -275,174 +275,138 @@
   "styles": [
     {
       "name": "Neoclassicism",
-      "count": 4373
+      "count": 4583
     },
     {
       "name": "Ukiyo-e",
-      "count": 3244
+      "count": 3632
     },
     {
       "name": "Baroque",
-      "count": 3067
-    },
-    {
-      "name": "Romanticism",
-      "count": 1979
+      "count": 3119
     },
     {
       "name": "Realism",
-      "count": 1881
+      "count": 2365
+    },
+    {
+      "name": "Romanticism",
+      "count": 2346
     },
     {
       "name": "Northern Renaissance",
-      "count": 1605
+      "count": 1629
     },
     {
       "name": "Mannerism",
-      "count": 1502
-    },
-    {
-      "name": "Art Nouveau",
-      "count": 1474
+      "count": 1508
     },
     {
       "name": "Rococo",
-      "count": 1429
+      "count": 1468
+    },
+    {
+      "name": "Art Nouveau",
+      "count": 887
     },
     {
       "name": "Symbolism",
-      "count": 864
-    },
-    {
-      "name": "Japanese prints, modern",
-      "count": 559
+      "count": 761
     },
     {
       "name": "High Renaissance",
-      "count": 483
+      "count": 499
     },
     {
       "name": "Ink and wash",
-      "count": 358
+      "count": 375
+    },
+    {
+      "name": "Naive art",
+      "count": 370
     },
     {
       "name": "Outside the taxonomy",
       "count": 329
     },
     {
-      "name": "Naturalism",
-      "count": 291
-    },
-    {
       "name": "Orientalism",
-      "count": 272
+      "count": 299
     },
     {
       "name": "Impressionism",
-      "count": 250
-    },
-    {
-      "name": "Naive art",
-      "count": 204
+      "count": 294
     },
     {
       "name": "Medieval",
-      "count": 197
+      "count": 209
     },
     {
-      "name": "Expressionism",
-      "count": 196
-    },
-    {
-      "name": "Photorealism",
-      "count": 176
-    },
-    {
-      "name": "Post-Impressionism",
-      "count": 121
-    },
-    {
-      "name": "Dada",
-      "count": 119
+      "name": "Japanese prints, modern",
+      "count": 199
     },
     {
       "name": "Persian & Ottoman",
-      "count": 100
+      "count": 154
+    },
+    {
+      "name": "Post-Impressionism",
+      "count": 128
     },
     {
       "name": "Early Renaissance",
-      "count": 97
+      "count": 99
     },
     {
-      "name": "Regionalism",
-      "count": 90
+      "name": "Naturalism",
+      "count": 88
     },
     {
-      "name": "Social Realism",
-      "count": 85
+      "name": "Expressionism",
+      "count": 47
     },
     {
-      "name": "Minimalism",
-      "count": 35
+      "name": "Geometric abstraction",
+      "count": 45
     },
     {
-      "name": "Surrealism",
-      "count": 30
+      "name": "Neo-Expressionism",
+      "count": 25
     },
     {
-      "name": "Pop Art",
-      "count": 18
-    },
-    {
-      "name": "Op Art",
-      "count": 17
+      "name": "Abstract art",
+      "count": 20
     },
     {
       "name": "Proto Renaissance",
       "count": 15
     },
     {
-      "name": "Geometric abstraction",
-      "count": 15
-    },
-    {
-      "name": "Art Deco",
-      "count": 7
-    },
-    {
       "name": "Fauvism",
       "count": 6
     },
     {
-      "name": "Abstract Expressionism",
-      "count": 5
-    },
-    {
-      "name": "Lyrical Abstraction",
-      "count": 5
-    },
-    {
-      "name": "Neo-Expressionism",
+      "name": "Art Deco",
       "count": 4
     },
     {
-      "name": "Abstract art",
+      "name": "Social Realism",
       "count": 4
+    },
+    {
+      "name": "Precisionism",
+      "count": 3
     },
     {
       "name": "Cubism",
       "count": 3
     },
     {
-      "name": "Colour Field",
-      "count": 3
-    },
-    {
       "name": "Futurism",
-      "count": 2
+      "count": 1
     },
     {
-      "name": "Precisionism",
+      "name": "Dada",
       "count": 1
     }
   ],

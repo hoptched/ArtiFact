@@ -94,6 +94,35 @@ def main() -> None:
 
     # --- style prediction ------------------------------------------------
     proba = model.predict_proba(vecs)
+
+    # A work cannot belong to a movement that had not started yet. Softmax
+    # has to answer with something, and on a corpus that is mostly pre-1900
+    # under a taxonomy that reaches into the 1960s, what it answered with
+    # was often impossible: before this, every work called Surrealism,
+    # Social Realism, Regionalism or Photorealism predated the movement.
+    #
+    # Compared against the latest year the work could have been made, so a
+    # label is ruled out only when even that is too early. A work with no
+    # date is never gated, and if a gate somehow left nothing, the row is
+    # restored rather than guessed at.
+    from pipeline.taxonomy_v2 import STYLE_EARLIEST
+    gate = np.array([STYLE_EARLIEST.get(l, -10_000) for l in labels])
+    # corpus is keyed by artwork id; ids is in vector order.
+    ends = np.array([
+        (corpus.get(i, {}).get("date_end") if
+         corpus.get(i, {}).get("date_end") is not None else 10_000)
+        for i in ids
+    ], dtype=float)
+    impossible = ends[:, None] < gate[None, :]
+    emptied = impossible.all(axis=1)
+    impossible[emptied] = False
+    moved = int((impossible[np.arange(len(proba)), proba.argmax(axis=1)]).sum())
+    proba = np.where(impossible, 0.0, proba)
+    total = proba.sum(axis=1, keepdims=True)
+    proba = np.divide(proba, total, out=proba, where=total > 0)
+    print(f"  era gate: {moved:,} works were given a movement that had not "
+          f"started when they were made")
+
     best = proba.argmax(axis=1)
     confidence = proba.max(axis=1)
     runner_up = np.partition(proba, -2, axis=1)[:, -2]

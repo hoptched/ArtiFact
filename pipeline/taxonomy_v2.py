@@ -136,3 +136,45 @@ _group("Photorealism", "Contemporary Realism", "New Realism", "Photorealism",
 # being hard to place, which is not something to teach a classifier.
 
 STYLE_LABELS: list[str] = sorted(set(STYLE_MAP.values()))
+
+
+# --- when a movement could first have happened -----------------------------
+#
+# The corpus is public domain and so about 95% pre-1900, while this taxonomy
+# reaches well into the 20th century. Softmax must answer, so it answers with
+# whatever is nearest — and the result was 20th-century labels on 18th-century
+# works. Measured over the built site before this gate existed: every work
+# called Surrealism, Social Realism, Regionalism or Photorealism predated the
+# movement, 99% of Dada did, and 75% of "Japanese prints, modern" were Edo
+# prints a century before Shin-hanga.
+#
+# A work cannot belong to a movement that had not started. Compared against
+# the latest year the work could have been made, so a label is ruled out only
+# when even that is too early, and a work with no date is never gated.
+#
+# Movements whose start is genuinely gradual or contested are left out: this
+# is for ruling out the impossible, not for arbitrating the edges.
+STYLE_EARLIEST: dict[str, int] = {
+    "Japanese prints, modern": 1880,   # Nihonga, the earliest of the three
+    "Impressionism": 1860,
+    "Naturalism": 1860,
+    "Post-Impressionism": 1886,
+    "Symbolism": 1880,
+    "Art Nouveau": 1890,
+    "Fauvism": 1904,
+    "Expressionism": 1905,
+    "Cubism": 1907,
+    "Futurism": 1909,
+    "Art Deco": 1910,
+    "Dada": 1916,
+    "Social Realism": 1920,
+    "Surrealism": 1924,
+    "Regionalism": 1930,
+    "Abstract Expressionism": 1943,
+    "Colour Field": 1947,
+    "Op Art": 1955,
+    "Pop Art": 1955,
+    "Minimalism": 1960,
+    "Photorealism": 1960,
+    "Lyrical Abstraction": 1945,
+}
