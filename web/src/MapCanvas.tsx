@@ -812,12 +812,59 @@ export function MapCanvas({
         }
       }
 
-      /** One work, drawn again over the field at a size of its own. */
+      /**
+       * One work, drawn again over the field at a size of its own.
+       *
+       * Through the same tiers the tiles use, chosen for the size it is
+       * drawn at rather than the size its tile would have been. Lifting
+       * a work is an invitation to look at it, and it was answering with
+       * a 64 pixel sprite blown up to three or four times that however
+       * far in you were.
+       *
+       * It asks for what it lacks as well. The tile loop only fetches
+       * for the size the tiles are, so nothing else was ever going to
+       * request the sharper copy this needs.
+       */
       const drawAt = (i: number, px: number, py: number, box: number) => {
         const ar = works[i].ar ?? 1;
         const bw = ar >= 1 ? box : box * ar;
         const bh = ar >= 1 ? box / ar : box;
         ctx.imageSmoothingEnabled = true;
+
+        const hiTileAt = hires?.meta.tile ?? 0;
+        const wantsReal =
+          box >= Math.max(TIER2_MIN_PX, hiTileAt * 0.9 || tile * 0.9);
+        if (wantsReal) {
+          const real = images.peek(works[i].img, box);
+          if (real) {
+            ctx.drawImage(real, px - bw / 2, py - bh / 2, bw, bh);
+            return { bw, bh };
+          }
+          images.fetch(works[i].img, box);
+        }
+
+        if (hires && hiAtlas && box >= tile * 0.9) {
+          const slot = hires.slots[i];
+          // Into the set the pump reads at the top of the next frame:
+          // this runs after this frame's pump has already gone.
+          hiWanted.add(hiAtlas.sheetOf(slot));
+          const sheet = hiAtlas.get(slot);
+          if (sheet) {
+            const g = hires.meta.grid, ht = hires.meta.tile;
+            const within = slot % hires.meta.per_sheet;
+            const iw = ar >= 1 ? ht : ht * ar;
+            const ih = ar >= 1 ? ht / ar : ht;
+            ctx.drawImage(
+              sheet,
+              (within % g) * ht + (ht - iw) / 2,
+              ((within / g) | 0) * ht + (ht - ih) / 2,
+              iw, ih,
+              px - bw / 2, py - bh / 2, bw, bh,
+            );
+            return { bw, bh };
+          }
+        }
+
         const sl = slots[i];
         const sh = sheets[(sl / per_sheet) | 0];
         if (sh) {
