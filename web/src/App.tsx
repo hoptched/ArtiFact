@@ -10,6 +10,19 @@ import { Logo } from "./Logo";
 import { useBundle } from "./useData";
 import type { Facet } from "./types";
 
+/* How much map to frame around a work, as a multiple of a work's own
+   radius. Larger arrives further out.
+
+   A work named somewhere else — a neighbour in the similar row, a link
+   out of its own facts, Surprise me — arrives with tiles about 50px
+   across, which is the size at which a work is worth looking at.
+
+   A work clicked on the map arrives with tiles around 17px and the best
+   part of the region it came from still on screen, because you were
+   reading it against that region when you clicked. */
+const FRAME_NAMED = 15;
+const FRAME_CLICKED = 45;
+
 const FACETS: { key: Facet; label: string }[] = [
   // Similarity first and default: it is the only arrangement where being
   // next to something means the two works look alike.
@@ -112,17 +125,24 @@ export default function App() {
   // Picking one off the map keeps selectWork instead, since you are
   // already looking at where it is and moving the map would take it out
   // from under the cursor.
-  const showWork = useCallback((i: number) => {
+  const showWork = useCallback((i: number, frame = FRAME_NAMED) => {
     if (!bundle) return;
     const layout = bundle.layouts.facets[facet];
     const at = layout.xy[i];
     setSelected(i);
     setOpenPin(null);
     if (at) {
-      const r = (layout.work_radius ?? bundle.layouts.work_radius) * 15;
+      const r = (layout.work_radius ?? bundle.layouts.work_radius) * frame;
       setFocus({ x: at[0], y: at[1], r, key: Date.now() });
     }
   }, [bundle, facet]);
+
+  // A work picked off the map arrives further out than one named
+  // somewhere else. You were looking at the region when you clicked, and
+  // landing close enough to fill the screen with one work throws away
+  // the thing you were reading it against.
+  const reveal = useCallback((i: number) => showWork(i, FRAME_CLICKED),
+                             [showWork]);
 
   const surprise = useCallback(() => {
     if (bundle) showWork(Math.floor(Math.random() * bundle.works.length));
@@ -235,7 +255,7 @@ export default function App() {
           rightInset={rightInset}
           paused={working !== ""}
           onNeedAtlas={needAtlas}
-          onReveal={showWork}
+          onReveal={reveal}
         />
       </div>
 
