@@ -46,6 +46,10 @@ interface View { x: number; y: number; scale: number }
 const THUMB_MIN_PX = 3.5;
 /** Tile size in the reduced atlas: a quarter of the 64px cell. */
 const MIP_TILE = 16;
+/** How much the work under the cursor grows. It also takes the floor a
+ *  selected work has, so close in it lifts a little and far out it comes
+ *  up to a size worth looking at. */
+const HOVER_GROW = 1.45;
 /** How small the selected work is allowed to get, in CSS pixels. Zoomed
  *  out it is one speck among twenty thousand, and the thing you just
  *  chose should not be the hardest thing on the map to find. */
@@ -228,6 +232,9 @@ export function MapCanvas({
   const touchRef = useRef(new Map<number, { x: number; y: number }>());
   const pinchRef = useRef<{ gap: number; x: number; y: number } | null>(null);
   const hiWantedRef = useRef<Set<number>>(new Set());
+  // The work under the cursor, or -1. A ref, so moving the mouse redraws
+  // the next frame without re-running the effect that owns the loop.
+  const hoverWorkRef = useRef(-1);
   // The ground tiles, decoded once and kept. A pattern is rebuilt only
   // when the facet or the pixel ratio changes, not per frame.
   const groundRef = useRef<Partial<Record<Facet, HTMLImageElement>>>({});
@@ -793,6 +800,46 @@ export function MapCanvas({
         }
       }
 
+      /** One work, drawn again over the field at a size of its own. */
+      const drawAt = (i: number, px: number, py: number, box: number) => {
+        const ar = works[i].ar ?? 1;
+        const bw = ar >= 1 ? box : box * ar;
+        const bh = ar >= 1 ? box / ar : box;
+        ctx.imageSmoothingEnabled = true;
+        const sl = slots[i];
+        const sh = sheets[(sl / per_sheet) | 0];
+        if (sh) {
+          const within = sl % per_sheet;
+          const iw = ar >= 1 ? tile : tile * ar;
+          const ih = ar >= 1 ? tile / ar : tile;
+          ctx.drawImage(
+            sh,
+            (within % grid) * tile + (tile - iw) / 2,
+            ((within / grid) | 0) * tile + (tile - ih) / 2,
+            iw, ih,
+            px - bw / 2, py - bh / 2, bw, bh,
+          );
+        } else {
+          ctx.fillStyle = works[i].k ?? "#3a3a3f";
+          ctx.fillRect(px - bw / 2, py - bh / 2, bw, bh);
+        }
+        return { bw, bh };
+      };
+
+      // Whatever the cursor is over, lifted the way a selected work is.
+      // Under the selection, so choosing one still reads as the stronger
+      // of the two, and skipped when they are the same work.
+      const hovered = hoverWorkRef.current;
+      if (hovered >= 0 && hovered !== selectedRef.current
+          && hovered * 2 + 1 < pos.length) {
+        drawAt(
+          hovered,
+          (pos[hovered * 2] - vx) * s + cx,
+          (pos[hovered * 2 + 1] - vy) * s + cy,
+          Math.max(size * HOVER_GROW, SELECTED_MIN_PX * dpr),
+        );
+      }
+
       const highlight = selectedRef.current;
       selRectRef.current = null;
       if (highlight !== null) {
@@ -813,26 +860,7 @@ export function MapCanvas({
         // again at the floor size. Close in the tile is already there at
         // the best resolution loaded, and redrawing it from the atlas
         // would only make it blurrier.
-        if (box > size) {
-          ctx.imageSmoothingEnabled = true;
-          const hslot = slots[highlight];
-          const sh = sheets[(hslot / per_sheet) | 0];
-          if (sh) {
-            const within = hslot % per_sheet;
-            const iw = ar >= 1 ? tile : tile * ar;
-            const ih = ar >= 1 ? tile / ar : tile;
-            ctx.drawImage(
-              sh,
-              (within % grid) * tile + (tile - iw) / 2,
-              ((within / grid) | 0) * tile + (tile - ih) / 2,
-              iw, ih,
-              px - bw / 2, py - bh / 2, bw, bh,
-            );
-          } else {
-            ctx.fillStyle = works[highlight].k ?? "#3a3a3f";
-            ctx.fillRect(px - bw / 2, py - bh / 2, bw, bh);
-          }
-        }
+        if (box > size) drawAt(highlight, px, py, box);
       }
 
       // Region names, except where the rules already name the axis — on
@@ -964,6 +992,46 @@ export function MapCanvas({
     return () => canvas.removeEventListener("wheel", onWheel);
   }, [homeView]);
 
+  /**
+   * The work nearest a point on the map, or -1.
+   *
+   * Through the spatial index, because this runs on every mouse move
+   * now, and walking all 25,515 works to answer it that often is the
+   * cost the index exists to avoid. While a grouping is animating the
+   * index describes where the works are going rather than where they
+   * are, so those frames fall back to the scan.
+   */
+  const workNear = (wx: number, wy: number) => {
+    const pos = posRef.current;
+    // A few tile-widths, so a point in a gap finds nothing rather than
+    // something across the map.
+    const reach = Math.max(radius * 3, 40 / viewRef.current.scale);
+    let best = -1, bestDist = reach * reach;
+    const test = (i: number) => {
+      const dx = pos[i * 2] - wx, dy = pos[i * 2 + 1] - wy;
+      const d = dx * dx + dy * dy;
+      if (d < bestDist) { bestDist = d; best = i; }
+    };
+    const g = gridIndex;
+    if (g && !animRef.current) {
+      const lo = (v: number, o: number, c: number, n: number) =>
+        Math.min(n - 1, Math.max(0, Math.floor((v - o) / c)));
+      const gx0 = lo(wx - reach, g.x0, g.cw, g.nx);
+      const gx1 = lo(wx + reach, g.x0, g.cw, g.nx);
+      const gy0 = lo(wy - reach, g.y0, g.ch, g.ny);
+      const gy1 = lo(wy + reach, g.y0, g.ch, g.ny);
+      for (let gy = gy0; gy <= gy1; gy++) {
+        const row = gy * g.nx;
+        for (let c = row + gx0; c <= row + gx1; c++) {
+          for (let k = g.start[c]; k < g.start[c + 1]; k++) test(g.items[k]);
+        }
+      }
+    } else {
+      for (let i = 0; i < works.length; i++) test(i);
+    }
+    return best;
+  };
+
   /** The gap between two fingers and the point halfway between them. */
   const spread = () => {
     const [a, b] = [...touchRef.current.values()];
@@ -1036,12 +1104,24 @@ export function MapCanvas({
       }
       if (best !== hoverRef.current) {
         hoverRef.current = best;
-        canvas.style.cursor = best ? "pointer" : "grab";
       }
+      // And the work itself, which is lifted under the cursor the way a
+      // selected one is. Only close enough in for aiming at one to be a
+      // gesture anyone can perform: out where tiles are specks the
+      // nearest is whatever the cursor happened to land beside.
+      const tilePx = radius * 2 * view.scale;
+      hoverWorkRef.current =
+        tilePx >= WORK_CLICK_MIN_PX ? workNear(wx, wy) : -1;
+      canvas.style.cursor =
+        best || hoverWorkRef.current >= 0 ? "pointer" : "grab";
       return;
     }
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
     if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
+    // Nothing is under the cursor while the map is being dragged out
+    // from under it, and a work left standing proud through a pan reads
+    // as stuck rather than as hovered.
+    hoverWorkRef.current = -1;
     const view = viewRef.current;
     view.x -= dx / view.scale;
     view.y -= dy / view.scale;
@@ -1139,16 +1219,9 @@ export function MapCanvas({
       return;
     }
 
-    const pos = posRef.current;
-    // Nearest work within a few tile-widths, so a click near a gap does
-    // nothing rather than selecting something across the map.
-    const reach = Math.max(radius * 3, 40 / viewRef.current.scale);
-    let best = -1, bestDist = reach * reach;
-    for (let i = 0; i < works.length; i++) {
-      const dx = pos[i * 2] - world.x, dy = pos[i * 2 + 1] - world.y;
-      const d = dx * dx + dy * dy;
-      if (d < bestDist) { bestDist = d; best = i; }
-    }
+    // The same search the cursor uses, so a click lands on whatever the
+    // hover had already lifted rather than on its own idea of nearest.
+    const best = workNear(world.x, world.y);
     if (best >= 0) {
       onSelect(best);
       return;
