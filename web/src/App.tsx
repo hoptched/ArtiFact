@@ -98,7 +98,13 @@ export default function App() {
     <div className="app">
       <aside className="sidebar">
         <header>
-          <h1><Logo /></h1>
+          <h1>
+            <a href="https://commons.wikimedia.org/wiki/File:Minerva,_by_Rembrandt_(1635).jpg#Summary"
+               target="_blank" rel="noreferrer"
+               title="Minerva, by Rembrandt (1635)">
+              <Logo />
+            </a>
+          </h1>
           <p>
             A collection of {bundle.works.length.toLocaleString()}{" "}
             public-domain works from the Art Institute of Chicago.
