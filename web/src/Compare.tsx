@@ -59,7 +59,7 @@ export function Compare({
 
   return (
     <section className="compare">
-      <h2>Your own picture</h2>
+      <h2>Add your own picture :)</h2>
 
       {/* Always opens the picker, and goes back to saying so the moment
           the comparison is done: the results live in the panel on the
