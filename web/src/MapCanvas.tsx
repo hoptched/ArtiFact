@@ -757,10 +757,11 @@ export function MapCanvas({
           const font = Math.min(34, Math.max(11, region.r * s * 0.24)) * dpr;
           if (font < 9 * dpr) continue;
           ctx.font = `600 ${font}px ui-sans-serif, system-ui, sans-serif`;
-          ctx.lineWidth = 4 * dpr;
-          ctx.strokeStyle = "rgba(6,6,8,0.85)";
-          ctx.strokeText(region.name, px, py);
-          ctx.fillStyle = "rgba(255,255,255,0.92)";
+          // Plain translucent white. It used to be laid over a dark
+          // outline, which kept it readable against any tile but gave
+          // every letter a second colour and a hard edge, so the names
+          // sat on the map rather than in it.
+          ctx.fillStyle = "rgba(255,255,255,0.62)";
           ctx.fillText(region.name, px, py);
         }
       }
