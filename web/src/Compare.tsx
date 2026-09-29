@@ -19,7 +19,9 @@ export function Compare({
 }) {
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
-  const [preview, setPreview] = useState<string | null>(null);
+  // Held for the pin and the panel, which both draw from it, and shown
+  // here only while the comparison runs.
+  const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [result, setResult] = useState<CompareResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -29,7 +31,7 @@ export function Compare({
     setBusy(true);
     setResult(null);
     const url = URL.createObjectURL(file);
-    setPreview((old) => { if (old) URL.revokeObjectURL(old); return url; });
+    setObjectUrl((old) => { if (old) URL.revokeObjectURL(old); return url; });
     onPin(null);
     try {
       await comparer.load(setStatus);
@@ -57,8 +59,11 @@ export function Compare({
     <section className="compare">
       <h2>Your own picture</h2>
 
-      {/* Always opens the picker: the results live in the panel on the
-          right now, so the only job left here is taking another image. */}
+      {/* Always opens the picker, and goes back to saying so the moment
+          the comparison is done: the results live in the panel on the
+          right and the picture itself is on the map, so the only job
+          left here is taking the next one. Holding the last picture in
+          the slot made it look occupied rather than ready. */}
       <button
         className="drop"
         disabled={busy}
@@ -70,8 +75,8 @@ export function Compare({
           if (f) void run(f);
         }}
       >
-        {preview
-          ? <img src={preview} alt="your picture" />
+        {busy && objectUrl
+          ? <img src={objectUrl} alt="the picture being compared" />
           : <span>Drop an image, or choose one</span>}
       </button>
       <input
