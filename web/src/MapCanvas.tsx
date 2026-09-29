@@ -21,6 +21,10 @@ const SELECTED_MIN_PX = 26;
 // inside a region means the region rather than whichever work happened to
 // be nearest the cursor.
 const WORK_CLICK_MIN_PX = 13;
+/** How much of the viewport a region fills once you have flown to it. */
+const FOCUS_FILL = 2.6;
+/** Floor on a region's radius, so a tiny one does not fill the screen. */
+const MIN_FOCUS_R = 0.02;
 // Period is a timeline, and its regions already read as one continuous
 // band running along the arc. Tinting each century made the sequence look
 // like seven separate things. It stays clickable, just uncoloured.
@@ -682,7 +686,8 @@ export function MapCanvas({
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
     // Fit the region, with a little air around it.
-    const target = Math.min(rect.width, rect.height) / (focus.r * 2.6);
+    const target =
+      Math.min(rect.width, rect.height) / (focus.r * FOCUS_FILL);
     flyRef.current = {
       from: { ...viewRef.current },
       to: { x: focus.x, y: focus.y, scale: target },
@@ -838,9 +843,23 @@ export function MapCanvas({
     // Zoomed out far enough that tiles are specks: aiming at one is not a
     // gesture anyone can perform, so a click inside a region goes to the
     // region. Close in, picking a work is exactly what a click means.
+    //
+    // Unless you are already there. A large region fitted to the screen
+    // still has tiles under that threshold, so going by tile size alone
+    // meant every further click flew you to the region you were looking
+    // at and the works inside it could never be reached. A click only
+    // travels while there is somewhere to travel to.
     const tilePx = radius * 2 * viewRef.current.scale;
-    if (pick && tilePx < WORK_CLICK_MIN_PX) {
-      onRegion(pick.c[0], pick.c[1], pick.r);
+    const arrived = (at: { r: number }) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return false;
+      const box = canvas.getBoundingClientRect();
+      const fitted = Math.min(box.width, box.height)
+        / (Math.max(at.r, MIN_FOCUS_R) * FOCUS_FILL);
+      return viewRef.current.scale >= fitted * 0.9;
+    };
+    if (pick && tilePx < WORK_CLICK_MIN_PX && !arrived(pick)) {
+      onRegion(pick.c[0], pick.c[1], Math.max(pick.r, MIN_FOCUS_R));
       return;
     }
 
@@ -859,9 +878,10 @@ export function MapCanvas({
       return;
     }
 
-    // Empty space inside a region: go to the region instead of deselecting.
-    if (pick) {
-      onRegion(pick.c[0], pick.c[1], pick.r);
+    // Empty space inside a region: go to the region instead of
+    // deselecting — again, only if that is somewhere else.
+    if (pick && !arrived(pick)) {
+      onRegion(pick.c[0], pick.c[1], Math.max(pick.r, MIN_FOCUS_R));
       return;
     }
     onSelect(null);

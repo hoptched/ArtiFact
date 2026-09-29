@@ -146,8 +146,7 @@ export default function App() {
           pins={mapPins}
           activePin={openPin}
           onOpenPin={showPin}
-          onRegion={(x, y, r) =>
-            setFocus({ x, y, r: Math.max(r, 0.02), key: Date.now() })}
+          onRegion={(x, y, r) => setFocus({ x, y, r, key: Date.now() })}
         />
       </div>
 
