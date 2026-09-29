@@ -761,7 +761,7 @@ export function MapCanvas({
           // outline, which kept it readable against any tile but gave
           // every letter a second colour and a hard edge, so the names
           // sat on the map rather than in it.
-          ctx.fillStyle = "rgba(255,255,255,0.62)";
+          ctx.fillStyle = "rgba(255,255,255,0.8)";
           ctx.fillText(region.name, px, py);
         }
       }
