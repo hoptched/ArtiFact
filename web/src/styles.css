@@ -378,83 +378,7 @@ dd { margin: 0; font-size: 0.85rem; }
   width: 100%; height: 100%; object-fit: cover; display: block;
 }
 
-/* Narrow screens. The bar stops being a rail down the side and becomes a
-   header across the top, holding about a fifth of the height, so the map
-   keeps the rest. Everything in it that was explanation rather than
-   control is dropped: there is no room to read on a phone, and the map
-   is the thing worth the space. */
-@media (max-width: 700px) {
-  .app { flex-direction: column; }
 
-  .sidebar {
-    /* As tall as what it holds, rather than a share of the screen. A
-       fifth was a guess, and a guess leaves either a gap under the last
-       key or a scroll bar beside it. The rows keep the full width they
-       had; only the height gives way. */
-    flex: 0 0 auto;
-    gap: 6px;
-    padding: 7px 12px 6px;
-    border-right: 0;
-    border-bottom: 1px solid var(--bar-edge);
-  }
-  /* A mark rather than a banner at this size. */
-  .sidebar header h1 a { width: 30%; min-width: 96px; }
-  .sidebar header p { display: none; }
-  /* Both section headings go: four labelled keys and a button say what
-     they are without a caption over them. */
-  .sidebar h2 { display: none; }
-  .switcher { gap: 5px; padding-bottom: var(--key-depth); }
-  .switcher button { padding: 6px 8px; font-size: 0.74rem; }
-
-  /* The well becomes a key. A slot you drop a file into means nothing on
-     a phone, where there is nothing to drag and the picker is the only
-     way in. */
-  .compare .drop {
-    /* A key like the two below it, at twice their width, since they
-       share a row and this one has it to itself. Nothing is dropped into
-       it on a phone: there is nothing to drag, and the picker is the
-       only way in. */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    min-height: 0;
-    padding: 6px 10px;
-    border-radius: 6px;
-    outline: 0;
-    background: var(--noise), linear-gradient(var(--key-top), var(--key-bottom));
-    background-blend-mode: overlay;
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.15),
-      inset 0 -1px 0 rgba(0, 0, 0, 0.4),
-      0 var(--key-depth) 0 var(--key-side),
-      0 3.5px 2.8px rgba(0, 0, 0, 0.6);
-    color: #d9d9d9;
-    font-size: 0.74rem;
-    text-shadow: 1px 1px 1px #151515;
-    margin-bottom: var(--key-depth);
-  }
-  .compare .drop span { display: none; }
-  .compare .drop::after { content: "Add a picture"; }
-  /* No preview here. The key keeps its label while the model runs, and
-     the overlay over the map says what is happening. */
-  .compare .drop img { display: none; }
-
-  .actions { gap: 5px; }
-  .sidebar .reset { padding: 6px 8px; font-size: 0.74rem; }
-  .about-link { margin-top: 0; font-size: 0.68rem; }
-
-  /* Over the whole screen, not a drawer at the foot of it. A work is the
-     thing you came for, and half a phone is not enough of one. */
-  .detail {
-    width: 100%;
-    height: 100%;
-    top: 0;
-    bottom: 0;
-    padding: 14px 16px 16px;
-  }
-  .detail .close { top: 8px; right: 10px; }
-}
 
 /* Region jump list. The style map puts Fauvism a third of a map away from
    anything else, which is honest — it looks like nothing else in the
@@ -508,14 +432,7 @@ dd { margin: 0; font-size: 0.85rem; }
 }
 .regions .reset:hover { color: var(--ink); background: rgba(255, 255, 255, 0.1); }
 
-@media (max-width: 820px) {
-  .app { flex-direction: column; }
-  .sidebar {
-    flex: 0 0 auto;
-    max-height: 42%;
-    padding: 14px 16px;
-  }
-}
+
 
 /* The last thing worth keeping, so it is the first thing dropped when the
    window is too short for everything. */
@@ -695,4 +612,86 @@ dd { margin: 0; font-size: 0.85rem; }
   border: 1px solid var(--line);
   color: var(--ink);
   font-size: 0.86rem;
+}
+
+/* Narrow screens. Last in the file on purpose: a media query
+   carries no extra weight, so a base rule written below it wins,
+   and half of this block was being overruled from further down.
+
+   Narrow screens. The bar stops being a rail down the side and becomes a
+   header across the top, holding about a fifth of the height, so the map
+   keeps the rest. Everything in it that was explanation rather than
+   control is dropped: there is no room to read on a phone, and the map
+   is the thing worth the space. */
+@media (max-width: 820px) {
+  .app { flex-direction: column; }
+
+  .sidebar {
+    /* As tall as what it holds, rather than a share of the screen. A
+       fifth was a guess, and a guess leaves either a gap under the last
+       key or a scroll bar beside it. The rows keep the full width they
+       had; only the height gives way. */
+    flex: 0 0 auto;
+    gap: 6px;
+    padding: 7px 12px 6px;
+    border-right: 0;
+    border-bottom: 1px solid var(--bar-edge);
+  }
+  /* A mark rather than a banner at this size. */
+  .sidebar header h1 a { width: 30%; min-width: 96px; }
+  .sidebar header p { display: none; }
+  /* Both section headings go: four labelled keys and a button say what
+     they are without a caption over them. */
+  .sidebar h2 { display: none; }
+  .switcher { gap: 5px; padding-bottom: var(--key-depth); }
+  .switcher button { padding: 6px 8px; font-size: 0.74rem; }
+
+  /* The well becomes a key. A slot you drop a file into means nothing on
+     a phone, where there is nothing to drag and the picker is the only
+     way in. */
+  .compare .drop {
+    /* A key like the two below it, at twice their width, since they
+       share a row and this one has it to itself. Nothing is dropped into
+       it on a phone: there is nothing to drag, and the picker is the
+       only way in. */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 0;
+    padding: 6px 10px;
+    border-radius: 6px;
+    outline: 0;
+    background: var(--noise), linear-gradient(var(--key-top), var(--key-bottom));
+    background-blend-mode: overlay;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.15),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.4),
+      0 var(--key-depth) 0 var(--key-side),
+      0 3.5px 2.8px rgba(0, 0, 0, 0.6);
+    color: #d9d9d9;
+    font-size: 0.74rem;
+    text-shadow: 1px 1px 1px #151515;
+    margin-bottom: var(--key-depth);
+  }
+  .compare .drop span { display: none; }
+  .compare .drop::after { content: "Add a picture"; }
+  /* No preview here. The key keeps its label while the model runs, and
+     the overlay over the map says what is happening. */
+  .compare .drop img { display: none; }
+
+  .actions { gap: 5px; }
+  .sidebar .reset { padding: 6px 8px; font-size: 0.74rem; }
+  .about-link { margin-top: 0; font-size: 0.68rem; }
+
+  /* Over the whole screen, not a drawer at the foot of it. A work is the
+     thing you came for, and half a phone is not enough of one. */
+  .detail {
+    width: 100%;
+    height: 100%;
+    top: 0;
+    bottom: 0;
+    padding: 14px 16px 16px;
+  }
+  .detail .close { top: 8px; right: 10px; }
 }
