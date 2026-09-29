@@ -63,13 +63,7 @@ export function Detail({
         <dt>Style</dt>
         <dd>
           {work.s === null ? (
-            <>
-              <span className="withheld">Outside the taxonomy</span>
-              <span className="muted note">
-                {" "}The classifier covers European painting and Japanese
-                ukiyo-e. It has no label that fits this work, so none is shown.
-              </span>
-            </>
+            <span className="withheld">Outside the taxonomy</span>
           ) : (
             <>
               <button className="jump predicted" onClick={() => onGoTo("style")}

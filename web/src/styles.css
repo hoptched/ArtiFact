@@ -252,7 +252,6 @@ dd { margin: 0; font-size: 0.85rem; }
 
 .muted { color: var(--muted); }
 .small { font-size: 0.74rem; }
-.note { display: block; margin-top: 4px; font-size: 0.74rem; line-height: 1.45; }
 
 .predicted { color: var(--accent); font-weight: 600; }
 
