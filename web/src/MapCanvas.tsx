@@ -29,6 +29,10 @@ const GROUND: Record<Facet, string> = {
   style: texStyle,
 };
 const GROUND_ALPHA = 0.05;
+/** How large the tile is drawn against how it was cut. Applied at the
+ *  pattern rather than by resampling the files, so the tiles keep their
+ *  full resolution and this stays one number to turn. */
+const GROUND_SCALE = 0.5;
 
 interface View { x: number; y: number; scale: number }
 
@@ -425,7 +429,7 @@ export function MapCanvas({
           if (pattern) {
             // Scaled by the pixel ratio, or the tile comes out half size
             // on a dense screen and twice as busy as it was drawn.
-            pattern.setTransform(new DOMMatrix().scale(dpr));
+            pattern.setTransform(new DOMMatrix().scale(dpr * GROUND_SCALE));
             oc.globalAlpha = GROUND_ALPHA;
             oc.fillStyle = pattern;
             oc.fillRect(0, 0, w, h);
