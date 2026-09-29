@@ -184,7 +184,7 @@ export interface MapPin {
 
 export function MapCanvas({
   bundle, facet, selected, onSelect, focus, pins, activePin, onOpenPin,
-  onRegion, rightInset, paused, onNeedAtlas,
+  onRegion, rightInset, paused, onNeedAtlas, onReveal,
 }: {
   bundle: Bundle;
   facet: Facet;
@@ -208,6 +208,9 @@ export function MapCanvas({
   /** Called the first time a thumbnail is wanted. The sheets are not
    *  fetched before that, because the opening view draws flat colour. */
   onNeedAtlas: () => void;
+  /** Choose a work and travel to it, for a click from far enough out
+   *  that the work is a speck where it stands. */
+  onReveal: (index: number) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const viewRef = useRef<View>({ x: 0.5, y: 0.5, scale: 0 });
@@ -1196,16 +1199,10 @@ export function MapCanvas({
       }
     }
 
-    // Zoomed out far enough that tiles are specks: aiming at one is not a
-    // gesture anyone can perform, so a click inside a region goes to the
-    // region. Close in, picking a work is exactly what a click means.
-    //
-    // Unless you are already there. A large region fitted to the screen
-    // still has tiles under that threshold, so going by tile size alone
-    // meant every further click flew you to the region you were looking
-    // at and the works inside it could never be reached. A click only
-    // travels while there is somewhere to travel to.
-    const tilePx = radius * 2 * viewRef.current.scale;
+    // A click only travels while there is somewhere to travel to. A
+    // large region fitted to the screen still has tiles too small to aim
+    // at, so going by tile size alone meant every further click flew you
+    // to the region you were already looking at.
     const arrived = (at: { r: number }) => {
       const canvas = canvasRef.current;
       if (!canvas) return false;
@@ -1214,16 +1211,21 @@ export function MapCanvas({
         / (Math.max(at.r, MIN_FOCUS_R) * FOCUS_FILL);
       return viewRef.current.scale >= fitted * 0.9;
     };
-    if (pick && tilePx < WORK_CLICK_MIN_PX && !arrived(pick)) {
-      onRegion(pick.c[0], pick.c[1], Math.max(pick.r, MIN_FOCUS_R));
-      return;
-    }
 
     // The same search the cursor uses, so a click lands on whatever the
     // hover had already lifted rather than on its own idea of nearest.
+    //
+    // A work wins over the region holding it. Zoomed out that means
+    // going to the work rather than to the region, which is what the
+    // cursor lifting it was promising; the region flight is left for a
+    // click on ground with nothing on it. Close in there is no promise
+    // to keep, and moving would only pull the work from under the
+    // cursor, so it is selected where it stands.
+    const tilePx = radius * 2 * viewRef.current.scale;
     const best = workNear(world.x, world.y);
     if (best >= 0) {
-      onSelect(best);
+      if (tilePx < WORK_CLICK_MIN_PX) onReveal(best);
+      else onSelect(best);
       return;
     }
 

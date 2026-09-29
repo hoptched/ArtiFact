@@ -235,6 +235,7 @@ export default function App() {
           rightInset={rightInset}
           paused={working !== ""}
           onNeedAtlas={needAtlas}
+          onReveal={showWork}
         />
       </div>
 
