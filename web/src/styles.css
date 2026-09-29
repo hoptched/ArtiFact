@@ -584,7 +584,15 @@ dd { margin: 0; font-size: 0.85rem; }
   animation: neon 8s linear infinite;
   text-shadow: 0 0 7px currentColor;
 }
-/* Still lit, no longer moving. */
+/* The setting is about movement, and a colour crossfade is not movement
+   — turning it off entirely just left the word stuck on whichever colour
+   the fallback named. What does read as movement here is the stagger,
+   which sends a wave along the word, so that is what goes: every letter
+   changes together, more slowly, and the glow comes off with it. */
 @media (prefers-reduced-motion: reduce) {
-  .neon span { animation: none; color: #39ff14; }
+  .neon span {
+    animation-duration: 20s;
+    animation-delay: 0s !important;
+    text-shadow: none;
+  }
 }
