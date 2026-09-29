@@ -105,9 +105,15 @@ export default function App() {
     return () => window.removeEventListener("resize", measure);
   }, [measure]);
 
-  const surprise = useCallback(() => {
+  // Choose a work and go to it, in the grouping already showing, at the
+  // same distance everything else arrives at. Used wherever a work is
+  // named somewhere other than the map itself: a neighbour in the
+  // similar row, a match against an uploaded picture, or Surprise me.
+  // Picking one off the map keeps selectWork instead, since you are
+  // already looking at where it is and moving the map would take it out
+  // from under the cursor.
+  const showWork = useCallback((i: number) => {
     if (!bundle) return;
-    const i = Math.floor(Math.random() * bundle.works.length);
     const layout = bundle.layouts.facets[facet];
     const at = layout.xy[i];
     setSelected(i);
@@ -117,6 +123,10 @@ export default function App() {
       setFocus({ x: at[0], y: at[1], r, key: Date.now() });
     }
   }, [bundle, facet]);
+
+  const surprise = useCallback(() => {
+    if (bundle) showWork(Math.floor(Math.random() * bundle.works.length));
+  }, [bundle, showWork]);
 
   // The map draws decoded images, so a picture is held back until its
   // own has loaded rather than flashing an empty frame where it goes.
@@ -238,7 +248,7 @@ export default function App() {
           bundle={bundle}
           url={pins[openPin].url}
           result={pins[openPin].result}
-          onSelect={selectWork}
+          onSelect={showWork}
           onClose={() => setOpenPin(null)}
         />
       )}
@@ -247,7 +257,7 @@ export default function App() {
         <Detail
           bundle={bundle}
           index={selected}
-          onSelect={selectWork}
+          onSelect={showWork}
           onGoTo={goTo}
           onClose={() => setSelected(null)}
         />
