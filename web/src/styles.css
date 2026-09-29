@@ -440,7 +440,17 @@ dd { margin: 0; font-size: 0.85rem; }
   max-height: 100%;
   overflow-y: auto;
   padding: 26px 30px 28px;
-  background: var(--panel);
+  /* The same grain as the bar and the work panel, but painted on rather
+     than laid over: this one scrolls, and a ::before pinned to its box
+     would travel up with the text. A background does not — it stays with
+     the element while the content moves under it. The near-opaque panel
+     colour on top is what takes the swirls down to the same weight the
+     0.035 layer gives them elsewhere; --panel is #16161a. */
+  background:
+    linear-gradient(rgba(22, 22, 26, 0.965), rgba(22, 22, 26, 0.965)),
+    url("./swirls.png") repeat,
+    var(--panel);
+  background-size: auto, 280px 280px, auto;
   border: 1px solid var(--line);
   border-radius: 4px;
 }
