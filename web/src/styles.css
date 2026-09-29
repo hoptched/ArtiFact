@@ -62,8 +62,8 @@ body {
   overflow: hidden;
 }
 
-/* Swirls over the panels, so the flat surfaces on the page have a grain
-   to them. Laid on as a separate layer rather than a background of its
+/* Swirls over the bar, so the one surface that is a surface rather than
+   a screen over the map has a grain to it. Laid on as a separate layer rather than a background of its
    own: the strength is then one number here, and the tile itself stays
    a plain figure-on-nothing that can be dropped on any colour.
 
@@ -71,8 +71,7 @@ body {
    cross-faded into each other and the folded strips dropped, which
    leaves the two sides as neighbours from the original — the join is
    now a smaller step than the one between any two adjacent pixels. */
-.sidebar::before,
-.detail::before {
+.sidebar::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -82,11 +81,9 @@ body {
   pointer-events: none;
 }
 
-/* Above the swirls. Without this a panel's own contents sit in the same
-   layer and the texture lands on top of the text. The close button sets
-   its own position and is more specific, so it keeps it. */
-.sidebar > *,
-.detail > * { position: relative; }
+/* Above the swirls. Without this the bar's own contents sit in the same
+   layer and the texture lands on top of the text. */
+.sidebar > * { position: relative; }
 
 /* The wordmark is artwork now, so the heading is only a box for it. */
 .sidebar header h1 {
@@ -248,7 +245,11 @@ body {
   width: min(26rem, 100%);
   height: 100%;
   overflow: hidden;
-  background: var(--panel);
+  /* A screen over the map rather than a panel cut into it: the works
+     carry on underneath, dimmed enough to read across. Opaque with a
+     pattern in it, this read as a hole in the map with its own wallpaper
+     — two surfaces where the page only wanted one. */
+  background: rgba(11, 11, 13, 0.84);
   padding: 18px 22px 20px;
   display: flex;
   flex-direction: column;
@@ -535,9 +536,9 @@ dd { margin: 0; font-size: 0.85rem; }
   max-height: 100%;
   overflow-y: auto;
   padding: 26px 30px 28px;
-  /* The same grain as the bar and the work panel, but painted on rather
-     than laid over: this one scrolls, and a ::before pinned to its box
-     would travel up with the text. A background does not — it stays with
+  /* The same grain as the bar, but painted on rather than laid over:
+     this one scrolls, and a ::before pinned to its box would travel up
+     with the text. A background does not — it stays with
      the element while the content moves under it. The near-opaque panel
      colour on top is what takes the swirls down to the same weight the
      0.035 layer gives them elsewhere; --panel is #16161a. */
