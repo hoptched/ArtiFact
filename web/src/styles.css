@@ -392,19 +392,19 @@ dd { margin: 0; font-size: 0.85rem; }
        key or a scroll bar beside it. The rows keep the full width they
        had; only the height gives way. */
     flex: 0 0 auto;
-    gap: 4px;
-    padding: 5px 12px 4px;
+    gap: 6px;
+    padding: 7px 12px 6px;
     border-right: 0;
     border-bottom: 1px solid var(--bar-edge);
   }
   /* A mark rather than a banner at this size. */
-  .sidebar header h1 a { width: 19%; min-width: 74px; }
+  .sidebar header h1 a { width: 30%; min-width: 96px; }
   .sidebar header p { display: none; }
   /* Both section headings go: four labelled keys and a button say what
      they are without a caption over them. */
   .sidebar h2 { display: none; }
   .switcher { gap: 5px; padding-bottom: var(--key-depth); }
-  .switcher button { padding: 4px 8px; font-size: 0.72rem; }
+  .switcher button { padding: 6px 8px; font-size: 0.74rem; }
 
   /* The well becomes a key. A slot you drop a file into means nothing on
      a phone, where there is nothing to drag and the picker is the only
@@ -417,7 +417,7 @@ dd { margin: 0; font-size: 0.85rem; }
     align-items: center;
     width: auto;
     min-height: 0;
-    padding: 4px 9px;
+    padding: 6px 10px;
     border-radius: 6px;
     outline: 0;
     background: var(--noise), linear-gradient(var(--key-top), var(--key-bottom));
@@ -436,25 +436,9 @@ dd { margin: 0; font-size: 0.85rem; }
   .compare .drop::after { content: "Add a picture"; }
   .compare .drop img { max-height: 2.2rem; }
 
-  /* One row: the add button beside the two that move the map. This is
-     where the height comes from — three stacked rows become one. */
-  .controls {
-    flex-direction: row;
-    align-items: flex-start;
-    gap: 5px;
-  }
-  .compare { flex: 0 0 auto; }
-  .actions { gap: 5px; flex: 0 0 auto; }
-  .sidebar .reset { padding: 4px 8px; font-size: 0.72rem; }
-  /* Into the end of the controls row rather than a line of its own. One
-     word does not deserve a row on a phone. */
-  .about-link {
-    position: absolute;
-    right: 12px;
-    bottom: 8px;
-    margin-top: 0;
-    font-size: 0.68rem;
-  }
+  .actions { gap: 5px; }
+  .sidebar .reset { padding: 6px 8px; font-size: 0.74rem; }
+  .about-link { margin-top: 0; font-size: 0.68rem; }
 
   /* Over the whole screen, not a drawer at the foot of it. A work is the
      thing you came for, and half a phone is not enough of one. */
