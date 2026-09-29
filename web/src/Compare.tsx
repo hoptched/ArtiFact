@@ -70,7 +70,9 @@ export function Compare({
 
   return (
     <section className="compare">
-      <h2>Add your own picture :)</h2>
+      {/* The wink is the first thing dropped when the heading has to
+          wrap, which it does in a rail on a short screen. */}
+      <h2>Add your own picture<span className="wink"> :)</span></h2>
 
       {/* Always opens the picker, and goes back to saying so the moment
           the comparison is done: the results live in the panel on the

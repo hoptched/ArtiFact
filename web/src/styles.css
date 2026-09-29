@@ -658,6 +658,8 @@ dd { margin: 0; font-size: 0.85rem; }
    width to spare and a phone lying down has no height. */
 @media (max-width: 820px), (max-height: 640px) {
   .sidebar { gap: 6px; padding: 7px 12px 6px; }
+  /* It costs a line of its own once the heading wraps. */
+  .wink { display: none; }
 
   .switcher { gap: 5px; padding-bottom: var(--key-depth); }
   .switcher button { padding: 6px 8px; font-size: 0.74rem; }
