@@ -759,16 +759,6 @@ export function MapCanvas({
           ctx.imageSmoothingEnabled = true;
           ctx.drawImage(im, x - pw / 2, y - ph / 2, pw, ph);
         }
-
-        ctx.font = `600 ${11 * dpr}px ui-sans-serif, system-ui, sans-serif`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "bottom";
-        ctx.lineWidth = 4 * dpr;
-        ctx.strokeStyle = "rgba(6,6,8,0.9)";
-        const tag = pins.length > 1 ? `yours ${which + 1}` : "yours";
-        ctx.strokeText(tag, x, y - ph / 2 - 8 * dpr);
-        ctx.fillStyle = "#f5c451";
-        ctx.fillText(tag, x, y - ph / 2 - 8 * dpr);
       }
 
       const highlight = selectedRef.current;
