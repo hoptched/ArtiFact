@@ -50,6 +50,10 @@ const MIP_TILE = 16;
  *  selected work has, so close in it lifts a little and far out it comes
  *  up to a size worth looking at. */
 const HOVER_GROW = 1.45;
+/** How long it takes to bring a clicked work to the middle. Shorter than
+ *  a flight, because nothing about the distance changes: it is a nudge
+ *  across the screen rather than a journey. */
+const CENTRE_MS = 420;
 /** How small the selected work is allowed to get, in CSS pixels. Zoomed
  *  out it is one speck among twenty thousand, and the thing you just
  *  chose should not be the hardest thing on the map to find. */
@@ -1224,8 +1228,32 @@ export function MapCanvas({
     const tilePx = radius * 2 * viewRef.current.scale;
     const best = workNear(world.x, world.y);
     if (best >= 0) {
-      if (tilePx < WORK_CLICK_MIN_PX) onReveal(best);
-      else onSelect(best);
+      if (tilePx < WORK_CLICK_MIN_PX) {
+        onReveal(best);
+      } else {
+        onSelect(best);
+        // Close in, the work is already the size it should be, so this
+        // only centres it. Done here rather than through a focus because
+        // a focus sets a scale from a radius, and the point is to keep
+        // the scale exactly as it is and move nothing but the middle.
+        //
+        // Offset for the panel, which is about to open over the right of
+        // the map, or is open already. If it opens, the inset arrives
+        // after this and the flight in progress is re-aimed for it.
+        const p = posRef.current;
+        const v = viewRef.current;
+        flyRef.current = {
+          from: { ...v },
+          to: {
+            x: p[best * 2] + aimOff(v.scale),
+            y: p[best * 2 + 1],
+            scale: v.scale,
+          },
+          start: performance.now(),
+          ms: CENTRE_MS,
+        };
+        flownWith.current = insetRef.current;
+      }
       return;
     }
 
