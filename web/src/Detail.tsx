@@ -1,5 +1,6 @@
 import type { Bundle } from "./useData";
 import { iiifUrl } from "./types";
+import { Thumb } from "./Thumb";
 import type { Facet } from "./types";
 
 const CONFIDENCE_STEPS = 3;
@@ -38,13 +39,7 @@ export function Detail({
       {/* The image sizes itself; the box around it absorbs the slack and
           sits empty, so there is no coloured block under a short work. */}
       <div className="herobox">
-        <img
-          src={iiifUrl(facets.iiif, work.img, 843)}
-          alt={work.t}
-          loading="eager"
-          // AIC 403s a localhost referer; sending none works everywhere.
-          referrerPolicy="no-referrer"
-        />
+        <Thumb src={iiifUrl(facets.iiif, work.img, 843)} alt={work.t} eager />
       </div>
 
       <h2>{work.t}</h2>
@@ -114,12 +109,8 @@ export function Detail({
           const other = works[i];
           return (
             <button key={id} onClick={() => onSelect(i)} title={other.t}>
-              <img
-                src={iiifUrl(facets.iiif, other.img, 200)}
-                alt={other.t}
-                loading="lazy"
-                referrerPolicy="no-referrer"
-              />
+              <Thumb src={iiifUrl(facets.iiif, other.img, 200)}
+                     alt={other.t} />
             </button>
           );
         })}

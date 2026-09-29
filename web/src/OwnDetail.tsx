@@ -1,6 +1,7 @@
 import type { Bundle } from "./useData";
 import type { CompareResult } from "./compare";
 import { iiifUrl } from "./types";
+import { Thumb } from "./Thumb";
 
 /** The most common value among the closest matches, and how dominant it is. */
 function consensus<T>(
@@ -99,12 +100,7 @@ export function OwnDetail({
               onClick={() => onSelect(m.index)}
               title={`${w.t} — ${(m.similarity * 100).toFixed(0)}% alike`}
             >
-              <img
-                src={iiifUrl(facets.iiif, w.img, 200)}
-                alt={w.t}
-                loading="lazy"
-                referrerPolicy="no-referrer"
-              />
+              <Thumb src={iiifUrl(facets.iiif, w.img, 200)} alt={w.t} />
             </button>
           );
         })}
