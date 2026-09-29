@@ -8,17 +8,6 @@ import { OwnDetail } from "./OwnDetail";
 import { useBundle } from "./useData";
 import type { Facet } from "./types";
 
-const facetNote: Record<Facet, string> = {
-  similarity: "Position is the image alone. Neighbours look alike, and "
-    + "there are no regions to click.",
-  period: "A continuous timeline. Bins are ordered by how their works "
-    + "look, not by date — that order turns out to be chronological — and "
-    + "within each, works run oldest to newest along the arc.",
-  country: "Regions are present-day countries, placed by how their works look.",
-  style: "Regions are predicted styles, plus one for the works no "
-    + "style in the taxonomy fits. Click a region to go there.",
-};
-
 const FACETS: { key: Facet; label: string }[] = [
   // Similarity first and default: it is the only arrangement where being
   // next to something means the two works look alike.
@@ -112,7 +101,6 @@ export default function App() {
               </button>
             ))}
           </div>
-          <p className="hint">{facetNote[facet]}</p>
         </section>
 
         <Compare
