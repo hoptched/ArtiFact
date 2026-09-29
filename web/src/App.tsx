@@ -113,8 +113,9 @@ export default function App() {
                 key={f.key}
                 className={f.key === facet ? "on" : ""}
                 onClick={() => setFacet(f.key)}
+                aria-pressed={f.key === facet}
               >
-                {f.label}
+                <span className="led" />{f.label}
               </button>
             ))}
           </div>
