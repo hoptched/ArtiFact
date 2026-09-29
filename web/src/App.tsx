@@ -136,7 +136,11 @@ export default function App() {
     let live = true;
     Promise.all(pins.map((p) => new Promise<MapPin>((resolve) => {
       const img = new Image();
-      const done = () => resolve({ img, matches: p.result.matches });
+      const done = () => resolve({
+        img,
+        matches: p.result.matches,
+        style: p.result.style?.label ?? null,
+      });
       img.onload = done;
       // Resolved on failure too, so the array stays the same length as
       // the list and an index means the same picture on both sides. The

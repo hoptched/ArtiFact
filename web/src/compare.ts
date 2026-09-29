@@ -187,12 +187,24 @@ export function placeAmong(
   matches: Match[],
   pos: (index: number) => [number, number] | null,
   regionOf: string[] | null,
+  /** A region the picture is known to belong to, which wins over the one
+   *  its neighbours happen to agree on. The style shown in the panel is
+   *  the head's reading of the picture itself; the region its neighbours
+   *  sit in is a separate question with a separate answer, and when the
+   *  two parted company the panel said one style while the map put the
+   *  picture in another. The panel's answer is the one about the
+   *  picture, so it decides. */
+  prefer?: string | null,
 ): [number, number] | null {
   const use = matches.slice(0, ANCHOR_K).filter((m) => pos(m.index));
   if (!use.length) return null;
 
   let chosen = use;
-  if (regionOf) {
+  if (regionOf && prefer) {
+    const inRegion = use.filter((m) => regionOf[m.index] === prefer);
+    if (inRegion.length) chosen = inRegion;
+  }
+  if (regionOf && chosen === use) {
     const tally = new Map<string, number>();
     for (const m of use) {
       const r = regionOf[m.index];

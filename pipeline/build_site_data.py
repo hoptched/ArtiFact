@@ -111,7 +111,8 @@ def main() -> None:
     config = Config.load()
     config.paths.ensure()
     vecs, ids, corpus, head, colors, dims = load(config)
-    model, labels = head["model"], head["labels"]
+    from pipeline.taxonomy_v2 import renamed
+    model, labels = head["model"], renamed(head["labels"])
     print(f"{len(ids):,} vectors, {len(corpus):,} corpus rows, "
           f"{len(labels)} style labels\n")
 

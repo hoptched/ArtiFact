@@ -30,6 +30,7 @@ import joblib
 import numpy as np
 
 from pipeline.config import Config
+from pipeline.taxonomy_v2 import renamed
 
 
 def main() -> None:
@@ -54,7 +55,7 @@ def main() -> None:
 
     model = head["model"]
     (out / "style_head.json").write_text(json.dumps({
-        "labels": head["labels"],
+        "labels": renamed(head["labels"]),
         "coef": [[round(float(v), 6) for v in row] for row in model.coef_],
         "intercept": [round(float(v), 6) for v in model.intercept_],
         "fingerprint": head["fingerprint"],

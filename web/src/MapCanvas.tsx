@@ -168,6 +168,9 @@ export interface Focus { x: number; y: number; r: number; key: number }
 export interface MapPin {
   img: HTMLImageElement;
   matches: { index: number; similarity: number }[];
+  /** What the model made of the picture itself, so the map can put it
+   *  where the panel says it belongs. */
+  style: string | null;
 }
 
 export function MapCanvas({
@@ -722,6 +725,10 @@ export function MapCanvas({
           (i) => (i * 2 + 1 < pos.length
             ? [pos[i * 2], pos[i * 2 + 1]] as [number, number] : null),
           regionOf && regionOf.length ? regionOf : null,
+          // Only where the regions are styles. Under place or period the
+          // picture has no claim of its own to make, so its neighbours
+          // speak for it.
+          facet === "style" ? p.style : null,
         );
         if (!at) continue;
         const x = (at[0] - vx) * s + cx;

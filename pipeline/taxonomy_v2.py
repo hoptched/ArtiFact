@@ -81,7 +81,7 @@ _group("Art Nouveau", "Art Nouveau (Modern)", "Modernismo", "Japonism")
 
 # --- east Asian traditions -------------------------------------------------
 _group("Ukiyo-e", "Ukiyo-e", "Yamato-e")
-_group("Japanese prints, modern", "Shin-hanga", "Sōsaku hanga", "Nihonga")
+_group("Modern woodblock", "Shin-hanga", "Sōsaku hanga", "Nihonga")
 _group("Ink and wash", "Ink and wash painting", "Nanga (Bunjinga)",
        "Gongbi", "Zen", "Joseon Dynasty")
 
@@ -155,7 +155,7 @@ STYLE_LABELS: list[str] = sorted(set(STYLE_MAP.values()))
 # Movements whose start is genuinely gradual or contested are left out: this
 # is for ruling out the impossible, not for arbitrating the edges.
 STYLE_EARLIEST: dict[str, int] = {
-    "Japanese prints, modern": 1880,   # Nihonga, the earliest of the three
+    "Modern woodblock": 1880,          # Nihonga, the earliest of the three
     "Impressionism": 1860,
     "Naturalism": 1860,
     "Post-Impressionism": 1886,
@@ -178,3 +178,22 @@ STYLE_EARLIEST: dict[str, int] = {
     "Photorealism": 1960,
     "Lyrical Abstraction": 1945,
 }
+
+
+# The head was trained before this label was renamed, and its own copy of
+# the name is baked into the fitted model. Renaming it there would mean
+# retraining for a word, so the name is mapped on the way out instead.
+#
+# Why it was renamed: the group is Shin-hanga, Sosaku hanga and Nihonga,
+# which is an idiom rather than a country. Two thirds of the works that
+# carry it are French, American or Norwegian — Helen Hyde working in
+# Tokyo, Gauguin's Noa Noa woodcuts, Munch's woodblocks — so a label
+# naming Japan sat over a Place row naming France and read as a
+# contradiction when both were true.
+STYLE_RENAMES: dict[str, str] = {
+    "Japanese prints, modern": "Modern woodblock",
+}
+
+
+def renamed(labels: list[str]) -> list[str]:
+    return [STYLE_RENAMES.get(l, l) for l in labels]
