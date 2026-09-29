@@ -295,6 +295,13 @@ body {
   margin-bottom: 14px;
   overflow: hidden;
 }
+/* The link generates no box of its own, so the picture stays the flex
+   item the box was built around — wrapping it in anything that lays out
+   would leave the image's max-height resolving against an auto height
+   and let a tall work run past the bottom of the panel. */
+.herobox a { display: contents; }
+.herobox img { transition: opacity 0.15s; }
+.herobox a:hover img { opacity: 0.88; }
 .herobox img {
   max-width: 100%;
   max-height: 100%;

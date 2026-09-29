@@ -77,3 +77,11 @@ export function iiifUrl(template: string, imageId: string, width: number) {
 export function percent(value: number) {
   return `${Math.round(value * 100)}%`;
 }
+
+/** The work's own page at the museum. The id in this bundle is the
+ *  museum's artwork id, so the page needs nothing else — checked against
+ *  their site, which answers on the bare id and titles the page with the
+ *  same work. */
+export function aicUrl(id: number) {
+  return `https://www.artic.edu/artworks/${id}`;
+}

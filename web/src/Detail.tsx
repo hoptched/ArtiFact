@@ -1,5 +1,5 @@
 import type { Bundle } from "./useData";
-import { iiifUrl, percent } from "./types";
+import { aicUrl, iiifUrl, percent } from "./types";
 import { Thumb } from "./Thumb";
 import type { Facet } from "./types";
 
@@ -30,8 +30,14 @@ export function Detail({
 
       {/* The image sizes itself; the box around it absorbs the slack and
           sits empty, so there is no coloured block under a short work. */}
+      {/* The picture is the way through to the museum's own page, which
+          has the provenance, the medium and the rest of what is not
+          worth repeating here. */}
       <div className="herobox">
-        <Thumb src={iiifUrl(facets.iiif, work.img, 843)} alt={work.t} />
+        <a href={aicUrl(work.id)} target="_blank" rel="noreferrer"
+           title="See this work at the Art Institute of Chicago">
+          <Thumb src={iiifUrl(facets.iiif, work.img, 843)} alt={work.t} />
+        </a>
       </div>
 
       <h2>{work.t}</h2>
