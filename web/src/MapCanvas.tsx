@@ -864,6 +864,22 @@ export function MapCanvas({
   }, [works, layouts, facet, atlasMeta, sheets, mips, radius, fit, ready,
       images, hires, hiAtlas, focus, pins, activePin, slots, onNeedAtlas]);
 
+  // A flight is aimed once, when it starts, and choosing a work opens a
+  // panel in the same commit that starts it: the panel is measured after
+  // the flight is already under way, so the flight was aimed as though
+  // nothing covered the map and landed a half-panel off, or past the
+  // edge of anything at all. Re-aim the one in progress when the
+  // measurement arrives. A flight is already moving, so moving its
+  // destination costs nothing; a view at rest is left alone.
+  const flownWith = useRef(rightInset);
+  useEffect(() => {
+    const fly = flyRef.current;
+    if (fly && flownWith.current !== rightInset) {
+      fly.to.x += (rightInset - flownWith.current) / (2 * fly.to.scale);
+    }
+    flownWith.current = rightInset;
+  }, [rightInset]);
+
   useEffect(() => {
     if (!focus) return;
     const canvas = canvasRef.current;
@@ -878,6 +894,7 @@ export function MapCanvas({
       start: performance.now(),
       ms: FLY_MS,
     };
+    flownWith.current = insetRef.current;
   }, [focus, seen, aimOff]);
 
   // --- interaction -------------------------------------------------------
