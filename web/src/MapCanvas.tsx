@@ -62,7 +62,12 @@ const TINTED_FACETS = new Set<Facet>(["country", "style"]);
 // century is a slice of a continuum, so flying to one answers a question
 // nobody asked by clicking there. Similarity has no regions at all.
 const REGION_CLICK_FACETS = new Set<Facet>(["country", "style"]);
+/** Where a region name has faded out completely. */
 const LABEL_MAX_SCALE = 4200;
+/** Where it starts going. Zooming in is a move towards the works and
+ *  away from the grouping, so the name should thin out as you go rather
+ *  than switch off at a threshold you cannot see coming. */
+const LABEL_FADE_FROM = 1600;
 const ANIM_MS = 750;
 /** How long the region fields take to appear once the works have settled. */
 const FIELD_FADE_MS = 550;
@@ -746,7 +751,9 @@ export function MapCanvas({
       // Region names, except where the rules already name the axis — on
       // the timeline they said the same thing twice and landed on top of
       // the works while doing it.
-      if (scale < LABEL_MAX_SCALE && !(rules && rules.length)) {
+      const labelFade = Math.min(1, Math.max(0,
+        (LABEL_MAX_SCALE - scale) / (LABEL_MAX_SCALE - LABEL_FADE_FROM)));
+      if (labelFade > 0 && !(rules && rules.length)) {
         const regions = layouts.facets[facet].regions;
         ctx.save();
         ctx.textAlign = "center";
@@ -758,6 +765,9 @@ export function MapCanvas({
         // on a context and would otherwise carry into the next frame.
         ctx.shadowColor = "rgba(0, 0, 0, 0.6)";
         ctx.shadowBlur = 7 * dpr;
+        // Takes the shadow down with the letters, so the name thins out
+        // whole rather than leaving its own shadow behind.
+        ctx.globalAlpha = labelFade;
         for (const region of regions) {
           const px = (region.c[0] - vx) * s + cx;
           const py = (region.c[1] - vy) * s + cy;
