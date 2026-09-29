@@ -84,6 +84,29 @@ def top_k_neighbors(vecs: np.ndarray, k: int) -> np.ndarray:
     return out
 
 
+def shown_date(row: dict) -> str:
+    """What the panel shows for a work's date.
+
+    The museum writes "n.d." for about one work in six, and then gives a
+    start and an end year anyway: every one of the 4,391 that say nothing
+    has a range in the catalogue behind it. Showing the words rather than
+    the range told the reader less than the record holds, so the range is
+    shown wherever the display line carries no year of its own.
+
+    Written with "to" rather than a dash, which is the house style for
+    this copy.
+    """
+    display = (row.get("date_display") or "").strip()
+    if any(ch.isdigit() for ch in display):
+        return display
+    start, end = row.get("date_start"), row.get("date_end")
+    if start is None and end is None:
+        return display or "date unknown"
+    if start is None or end is None or start == end:
+        return str(start if start is not None else end)
+    return f"{start} to {end}"
+
+
 def main() -> None:
     config = Config.load()
     config.paths.ensure()
@@ -175,7 +198,7 @@ def main() -> None:
             # artist_display keeps "After Raphael"; artist_title flattens it
             "a": r.get("artist_display") or r.get("artist"),
             "img": r["image_id"],
-            "d": r.get("date_display"),
+            "d": shown_date(r),
             "pb": r["period_bins"],
             # Midpoint year: the period arc uses it to order works inside a
             # bin, so the seam between two bins is where their dates meet.
