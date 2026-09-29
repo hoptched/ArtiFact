@@ -27,6 +27,8 @@ const WORK_CLICK_MIN_PX = 13;
 const TINTED_FACETS = new Set<Facet>(["country", "style"]);
 const LABEL_MAX_SCALE = 4200;
 const ANIM_MS = 750;
+/** How long the region fields take to appear once the works have settled. */
+const FIELD_FADE_MS = 550;
 const FLY_MS = 900;
 
 /**
@@ -151,6 +153,12 @@ export function MapCanvas({
   const fromRef = useRef<Float32Array>(new Float32Array(0));
   const toRef = useRef<Float32Array>(new Float32Array(0));
   const animRef = useRef<{ start: number } | null>(null);
+  // When the region fields may start appearing. Null while the works are
+  // still travelling: a field is a claim about where a group of works is,
+  // and drawing it over the empty ground they are heading towards makes
+  // the claim before it is true. Zero at the start, so the first layout
+  // is simply there.
+  const fieldFadeRef = useRef<number | null>(0);
   const dragRef = useRef<{ x: number; y: number; moved: boolean } | null>(null);
   const hiWantedRef = useRef<Set<number>>(new Set());
   // Which work wears the highlight. A ref rather than a dependency of the
@@ -250,6 +258,7 @@ export function MapCanvas({
     fromRef.current = posRef.current.slice();
     toRef.current = target;
     animRef.current = { start: performance.now() };
+    fieldFadeRef.current = null;
 
     // Pull back to the whole map as the regions re-form. Every facet
     // rearranges the entire corpus, so whatever you were looking at is
@@ -327,7 +336,10 @@ export function MapCanvas({
         for (let i = 0; i < pos.length; i++) {
           pos[i] = from[i] + (to[i] - from[i]) * e;
         }
-        if (t >= 1) animRef.current = null;
+        if (t >= 1) {
+          animRef.current = null;
+          fieldFadeRef.current = performance.now();
+        }
       }
 
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -370,7 +382,10 @@ export function MapCanvas({
       // Filling and blurring these per frame cost in proportion to the
       // area they covered, which is why the tinted facets dragged and the
       // timeline did not.
-      if (fields.length) {
+      const fadeAt = fieldFadeRef.current;
+      const fieldFade = fadeAt === null
+        ? 0 : Math.min(1, (performance.now() - fadeAt) / FIELD_FADE_MS);
+      if (fields.length && fieldFade > 0) {
         // Set explicitly: the tile pass below turns smoothing off once
         // tiles are large, and a field scaled up without it is a staircase.
         ctx.imageSmoothingEnabled = true;
@@ -379,7 +394,8 @@ export function MapCanvas({
           const fy = (f.y0 - vy) * s + cy;
           const fw = f.w * s, fh = f.h * s;
           if (fx + fw < 0 || fy + fh < 0 || fx > w || fy > h) continue;
-          ctx.globalAlpha = hoverRef.current === f.name ? 0.42 : 0.24;
+          ctx.globalAlpha =
+            (hoverRef.current === f.name ? 0.42 : 0.24) * fieldFade;
           ctx.drawImage(f.tex, fx, fy, fw, fh);
         }
         ctx.globalAlpha = 1;
