@@ -584,15 +584,12 @@ dd { margin: 0; font-size: 0.85rem; }
   animation: neon 8s linear infinite;
   text-shadow: 0 0 7px currentColor;
 }
-/* The setting is about movement, and a colour crossfade is not movement
-   — turning it off entirely just left the word stuck on whichever colour
-   the fallback named. What does read as movement here is the stagger,
-   which sends a wave along the word, so that is what goes: every letter
-   changes together, more slowly, and the glow comes off with it. */
+/* Each letter runs a tenth of a second behind the one to its left, so
+   the colour arrives at the S first and reaches the end of the word last.
+   Nothing moves — every letter stays where it is and only its colour
+   changes — so under a request for reduced motion the wave is kept and
+   simply slowed, rather than flattened into the whole word changing at
+   once. */
 @media (prefers-reduced-motion: reduce) {
-  .neon span {
-    animation-duration: 20s;
-    animation-delay: 0s !important;
-    text-shadow: none;
-  }
+  .neon span { animation-duration: 16s; }
 }
