@@ -18,6 +18,12 @@
   --key-top: #4a4a4a;
   --key-bottom: #3a3a3a;
   --key-side: #2b2b2b;
+  /* How tall a key's side is, what it keeps once pressed, and therefore
+     how far the face travels — a key sinks by exactly what its side
+     loses, so these three have to move together. */
+  --key-depth: 2.8px;
+  --key-depth-down: 0.7px;
+  --key-travel: 2.1px;
   /* Grain, over the tray and the keys alike. Generated, so it costs a
      string rather than a file, and tiles at any size. */
   --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.35'/%3E%3C/svg%3E");
@@ -109,8 +115,7 @@ body {
 
 .sidebar h2 {
   margin: 0 0 7px;
-  font-size: 0.99rem;    /* half again over the 0.66rem they shared with
-                            the panel's own headings */
+  font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.12em;
@@ -121,13 +126,16 @@ body {
    here that tray was a dark well cut into a rail that is already a
    surface, and the bar gained a hole rather than the keys gaining depth.
    The keys keep their sides, which is where the depth was coming from.
-   Proportions are the reference's at bar size: a 44px key becomes a
-   0.78rem one and its 8px side becomes 4px. */
+   Proportions are the reference's at bar size, with the side taken back
+   a further 30%: its 8px becomes 2.8px here. The depth is one number in
+   --key-depth, because three other lengths are derived from it — the
+   room the group leaves below, how far a key travels when pressed, and
+   what its side is left with once it has. */
 .switcher {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  padding-bottom: 4px;    /* room for the sides to sit on */
+  padding-bottom: var(--key-depth);    /* room for the sides to sit on */
 }
 
 .switcher button,
@@ -152,8 +160,8 @@ body {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.15),
     inset 0 -1px 0 rgba(0, 0, 0, 0.4),
-    0 4px 0 var(--key-side),
-    0 5px 4px rgba(0, 0, 0, 0.6);
+    0 var(--key-depth) 0 var(--key-side),
+    0 3.5px 2.8px rgba(0, 0, 0, 0.6);
   text-shadow: 1px 1px 1px #151515;
   transition: top 0.06s, box-shadow 0.06s, color 0.12s;
 }
@@ -168,12 +176,12 @@ body {
 .switcher button:active,
 .sidebar .reset:active,
 .switcher button.on {
-  top: 3px;
+  top: var(--key-travel);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.1),
     inset 0 -1px 0 rgba(0, 0, 0, 0.4),
-    0 1px 0 var(--key-side),
-    0 2px 3px rgba(0, 0, 0, 0.6);
+    0 var(--key-depth-down) 0 var(--key-side),
+    0 1.4px 2.1px rgba(0, 0, 0, 0.6);
 }
 .switcher button.on { color: #e6e6e6; }
 
@@ -204,7 +212,7 @@ body {
   width: auto;
   flex: 0 0 auto;
   align-self: flex-start;
-  margin-bottom: 4px;     /* its side, again */
+  margin-bottom: var(--key-depth);     /* its side, again */
 }
 
 .stage { position: relative; flex: 1 1 auto; min-width: 0; }
@@ -500,7 +508,7 @@ dd { margin: 0; font-size: 0.85rem; }
   border: 0;
   padding: 2px 0;
   font: inherit;
-  font-size: 1.17rem;
+  font-size: 0.66rem;
   color: var(--muted);
   cursor: pointer;
   border-bottom: 1px dotted rgba(255, 255, 255, 0.25);
