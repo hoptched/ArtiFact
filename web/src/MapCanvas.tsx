@@ -748,8 +748,16 @@ export function MapCanvas({
       // the works while doing it.
       if (scale < LABEL_MAX_SCALE && !(rules && rules.length)) {
         const regions = layouts.facets[facet].regions;
+        ctx.save();
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
+        // A shadow rather than an outline. The shadow of filled text is a
+        // blurred copy behind it, so the name keeps one colour and gains
+        // no edge — it darkens what is under the letters just enough to
+        // hold them. Set once for the whole pass: shadow state is sticky
+        // on a context and would otherwise carry into the next frame.
+        ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
+        ctx.shadowBlur = 6 * dpr;
         for (const region of regions) {
           const px = (region.c[0] - vx) * s + cx;
           const py = (region.c[1] - vy) * s + cy;
@@ -757,13 +765,10 @@ export function MapCanvas({
           const font = Math.min(34, Math.max(11, region.r * s * 0.24)) * dpr;
           if (font < 9 * dpr) continue;
           ctx.font = `600 ${font}px ui-sans-serif, system-ui, sans-serif`;
-          // Plain translucent white. It used to be laid over a dark
-          // outline, which kept it readable against any tile but gave
-          // every letter a second colour and a hard edge, so the names
-          // sat on the map rather than in it.
-          ctx.fillStyle = "rgba(255,255,255,0.8)";
+          ctx.fillStyle = "rgba(255,255,255,0.9)";
           ctx.fillText(region.name, px, py);
         }
+        ctx.restore();
       }
     };
     frame = requestAnimationFrame(draw);
