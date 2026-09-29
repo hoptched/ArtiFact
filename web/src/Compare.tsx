@@ -86,7 +86,8 @@ export function Compare({
         }}
       >
         {busy && objectUrl
-          && <img src={objectUrl} alt="the picture being compared" />}
+          ? <img src={objectUrl} alt="the picture being compared" />
+          : <span>we will try to guess...</span>}
       </button>
       <input
         ref={inputRef}
