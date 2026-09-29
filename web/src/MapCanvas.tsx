@@ -172,7 +172,7 @@ export interface MapPin {
 
 export function MapCanvas({
   bundle, facet, selected, onSelect, focus, pins, activePin, onOpenPin,
-  onRegion,
+  onRegion, rightInset,
 }: {
   bundle: Bundle;
   facet: Facet;
@@ -184,6 +184,11 @@ export function MapCanvas({
   pins: MapPin[];
   onOpenPin: (which: number) => void;
   onRegion: (x: number, y: number, r: number) => void;
+  /** How much of the canvas's right edge a panel is covering, in CSS
+   *  pixels. The canvas runs the full width of the stage and the panel
+   *  sits over it, so without this the map centres itself underneath
+   *  the panel and half of what it framed cannot be seen. */
+  rightInset: number;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const viewRef = useRef<View>({ x: 0.5, y: 0.5, scale: 0 });
@@ -282,10 +287,16 @@ export function MapCanvas({
   // about a tenth as tall as it is wide, so most of that square is empty.
   // Framing the works' own bounds centres whatever the facet actually
   // draws, and fills the viewport with it.
+  // The shorter side of the visible strip, which is what a fitted view
+  // has to fit inside.
+  const seen = useCallback(
+    (rect: DOMRect) => Math.min(rect.width - rightInset, rect.height),
+    [rightInset]);
+
   const homeView = useCallback((rect: DOMRect) => {
     const g = gridIndex;
     if (!g) {
-      return { x: 0.5, y: 0.5, scale: Math.min(rect.width, rect.height) * 0.92 };
+      return { x: 0.5, y: 0.5, scale: seen(rect) * 0.92 };
     }
     // Read off the index, which measured these bounds once when it was
     // built. This used to flatten the layout and scan all 25,515 works
@@ -301,14 +312,15 @@ export function MapCanvas({
     const spanX = x1 - x0 + pad * 2;
     const spanY = y1 - y0 + pad * 2;
     if (!(spanX > 0) || !(spanY > 0)) {
-      return { x: 0.5, y: 0.5, scale: Math.min(rect.width, rect.height) * 0.92 };
+      return { x: 0.5, y: 0.5, scale: seen(rect) * 0.92 };
     }
     return {
       x: (x0 + x1) / 2,
       y: (y0 + y1) / 2,
-      scale: Math.min(rect.width / spanX, rect.height / spanY) * 0.92,
+      scale: Math.min((rect.width - rightInset) / spanX,
+                      rect.height / spanY) * 0.92,
     };
-  }, [layouts, facet, gridIndex]);
+  }, [layouts, facet, gridIndex, rightInset, seen]);
 
   useEffect(() => {
     const target = flatten(facet);
@@ -408,7 +420,8 @@ export function MapCanvas({
       const w = canvas.width, h = canvas.height;
       const { x: vx, y: vy, scale } = viewRef.current;
       const s = scale * dpr;
-      const cx = w / 2, cy = h / 2;
+      // The middle of what can be seen, rather than of the canvas.
+      const cx = (w - rightInset * dpr) / 2, cy = h / 2;
 
       // The background, with the grouping's ground already in it.
       //
@@ -788,7 +801,7 @@ export function MapCanvas({
     frame = requestAnimationFrame(draw);
     return () => { cancelAnimationFrame(frame); ro.disconnect(); };
   }, [works, layouts, facet, atlasMeta, sheets, mips, radius, fit, ready,
-      images, hires, hiAtlas, focus, pins, activePin]);
+      images, hires, hiAtlas, focus, pins, activePin, rightInset]);
 
   useEffect(() => {
     if (!focus) return;
@@ -797,14 +810,14 @@ export function MapCanvas({
     const rect = canvas.getBoundingClientRect();
     // Fit the region, with a little air around it.
     const target =
-      Math.min(rect.width, rect.height) / (focus.r * FOCUS_FILL);
+      seen(rect) / (focus.r * FOCUS_FILL);
     flyRef.current = {
       from: { ...viewRef.current },
       to: { x: focus.x, y: focus.y, scale: target },
       start: performance.now(),
       ms: FLY_MS,
     };
-  }, [focus]);
+  }, [focus, seen]);
 
   // --- interaction -------------------------------------------------------
   const toWorld = (clientX: number, clientY: number) => {
@@ -812,7 +825,7 @@ export function MapCanvas({
     const rect = canvas.getBoundingClientRect();
     const { x, y, scale } = viewRef.current;
     return {
-      x: (clientX - rect.left - rect.width / 2) / scale + x,
+      x: (clientX - rect.left - (rect.width - rightInset) / 2) / scale + x,
       y: (clientY - rect.top - rect.height / 2) / scale + y,
     };
   };
@@ -832,7 +845,8 @@ export function MapCanvas({
       const rect = canvas.getBoundingClientRect();
       const view = viewRef.current;
       const at = (cx: number, cy: number) => ({
-        x: (cx - rect.left - rect.width / 2) / view.scale + view.x,
+        x: (cx - rect.left - (rect.width - rightInset) / 2) / view.scale
+           + view.x,
         y: (cy - rect.top - rect.height / 2) / view.scale + view.y,
       });
       const before = at(e.clientX, e.clientY);

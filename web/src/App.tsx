@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { MapCanvas } from "./MapCanvas";
 import type { Focus, MapPin } from "./MapCanvas";
 import type { Pin } from "./Compare";
@@ -75,6 +75,32 @@ export default function App() {
   // Somewhere you would not have gone. Lands on the work in the grouping
   // you are already in, at the same distance following a fact does, so
   // it arrives among neighbours rather than on a work alone.
+  // How much of the map the open panel is covering. The canvas runs the
+  // full width of the stage and the panel sits over its right edge, so
+  // the map would otherwise centre itself underneath the panel. Measured
+  // rather than assumed, because the panel's width is set in CSS and it
+  // moves to the bottom of the screen on a narrow one, where it covers
+  // nothing on the right.
+  const [rightInset, setRightInset] = useState(0);
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  const measure = useCallback(() => {
+    const stage = stageRef.current;
+    const panel = document.querySelector(".detail");
+    if (!stage || !panel) { setRightInset(0); return; }
+    const p = panel.getBoundingClientRect();
+    const s = stage.getBoundingClientRect();
+    const onTheRight = p.right >= s.right - 1 && p.top <= s.top + 1;
+    setRightInset(onTheRight ? p.width : 0);
+  }, []);
+  // Before paint, so the first frame drawn with a panel open is already
+  // centred for it. Runs after every render and settles at once, since
+  // setting the same number again does nothing.
+  useLayoutEffect(measure);
+  useEffect(() => {
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [measure]);
+
   const surprise = useCallback(() => {
     if (!bundle) return;
     const i = Math.floor(Math.random() * bundle.works.length);
@@ -176,7 +202,7 @@ export default function App() {
         <About works={bundle.works.length} />
       </aside>
 
-      <div className="stage">
+      <div className="stage" ref={stageRef}>
         <MapCanvas
           bundle={bundle}
           facet={facet}
@@ -187,6 +213,7 @@ export default function App() {
           activePin={openPin}
           onOpenPin={showPin}
           onRegion={(x, y, r) => setFocus({ x, y, r, key: Date.now() })}
+          rightInset={rightInset}
         />
       </div>
 
