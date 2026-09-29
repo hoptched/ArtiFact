@@ -1,0 +1,20 @@
+# Cloudflare Pages and Netlify both read this file.
+#
+# Everything under /assets carries a content hash in its name, so a
+# change makes a new name and a stale copy can never be served. A year
+# is the longest any cache will honour.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# The atlas sheets and the data bundle have stable names, so they are
+# revalidated rather than trusted forever: a day of silence, then a
+# conditional request that costs a header exchange when nothing changed.
+/atlas/*
+  Cache-Control: public, max-age=86400, must-revalidate
+/data/*
+  Cache-Control: public, max-age=86400, must-revalidate
+
+# The page itself is the one thing that must never be stale, since it
+# names every hashed asset the rest of the site loads.
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate

@@ -286,14 +286,16 @@ body {
   color: var(--ink);
   border-color: var(--muted);
 }
-/* The box takes the leftover height; the image takes only what it needs
-   and sits at the bottom of it, so any slack is above the picture rather
-   than as a coloured slab between it and the title. */
+/* The box takes the leftover height and the image takes only what it
+   needs, so there is slack whenever a work is wide and short. Split
+   evenly above and below: held to the bottom it left a tall empty band
+   over the picture and none under it, which read as a gap rather than
+   as margin. */
 .herobox {
   flex: 1 1 auto;
   min-height: 5rem;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
   margin-bottom: 14px;
   overflow: hidden;

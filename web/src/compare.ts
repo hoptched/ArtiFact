@@ -1,3 +1,5 @@
+declare const __ORT_VERSION__: string;
+
 
 export interface CompareMeta {
   count: number;
@@ -73,8 +75,18 @@ export class Comparer {
     }
 
     onProgress?.("Loading the image model (~173 MB, once)…");
-    const { AutoProcessor, CLIPVisionModelWithProjection } =
+    const { AutoProcessor, CLIPVisionModelWithProjection, env } =
       await import("@huggingface/transformers");
+    // From the CDN rather than from us. The file is 25.6 MiB, larger than
+    // some static hosts allow for one asset, and the copy there is byte
+    // for byte the same. The version comes from the installed package at
+    // build time, so it cannot fall out of step with the runtime asking
+    // for it.
+    const wasm = env.backends.onnx.wasm;
+    if (wasm) {
+      wasm.wasmPaths =
+        `https://cdn.jsdelivr.net/npm/onnxruntime-web@${__ORT_VERSION__}/dist/`;
+    }
     // The same class the pipeline used, not the generic feature-extraction
     // pipeline: CLIP's vision export has no pooler, so asking that pipeline
     // to pool fails outright. This one emits image_embeds straight from the
