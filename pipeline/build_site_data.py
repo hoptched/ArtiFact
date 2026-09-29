@@ -282,6 +282,11 @@ def main() -> None:
             # could name a style it had nowhere to put, which is what an
             # uploaded picture does when the model reads it as one of the
             # rare ones.
+            # The region the thin labels share, so the site can send a
+            # picture there when the model names a style this corpus has
+            # no region for at all — Pop Art, Surrealism, anything the
+            # era gate emptied.
+            "pooled_into": (layout.POOLED_STYLES if facet == "style" else None),
             "label_region": ({
                 (w["s"] or OUTSIDE_TAXONOMY): r
                 for w, r in zip(works, labels)

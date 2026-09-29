@@ -27,6 +27,10 @@ from pipeline.taxonomy import OUTSIDE_TAXONOMY, period_label
 # A region holding fewer than this is a speck on the map; 23 of the 35
 # countries are below it, together holding 292 works.
 MIN_REGION = 50
+# What the thin style labels share. Named once: the site needs it too, to
+# know where to put a picture the model reads as a style this corpus has
+# no region for.
+POOLED_STYLES = "Other styles"
 
 # Everything below works in a 0..1 square holding a disc of radius 0.5.
 DISC_R = 0.5
@@ -183,7 +187,7 @@ def facet_values(works: list[dict], facet: str) -> list[str]:
             counts[s] = counts.get(s, 0) + 1
         thin = {s for s, n in counts.items()
                 if n < MIN_REGION and s != OUTSIDE_TAXONOMY}
-        return [("Other styles" if (w["s"] or OUTSIDE_TAXONOMY) in thin
+        return [(POOLED_STYLES if (w["s"] or OUTSIDE_TAXONOMY) in thin
                  else (w["s"] or OUTSIDE_TAXONOMY)) for w in works]
     if facet == "country":
         counts: dict[str, int] = {}

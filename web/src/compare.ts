@@ -1,5 +1,7 @@
 declare const __ORT_VERSION__: string;
 
+import type { Facet, Layouts } from "./types";
+
 
 export interface CompareMeta {
   count: number;
@@ -195,6 +197,12 @@ export function placeAmong(
    *  picture in another. The panel's answer is the one about the
    *  picture, so it decides. */
   prefer?: string | null,
+  /** Where a region sits, for the case where the picture belongs to one
+   *  that none of its neighbours are in. A Hockney pool read as Pop Art
+   *  has Hokusai waves for neighbours and nothing in Other styles, where
+   *  Pop Art lives; without this it fell back to the neighbours and the
+   *  map put it in Ukiyo-e while the panel said Pop Art. */
+  centreOf?: (region: string) => [number, number] | null,
 ): [number, number] | null {
   const use = matches.slice(0, ANCHOR_K).filter((m) => pos(m.index));
   if (!use.length) return null;
@@ -203,6 +211,10 @@ export function placeAmong(
   if (regionOf && prefer) {
     const inRegion = use.filter((m) => regionOf[m.index] === prefer);
     if (inRegion.length) chosen = inRegion;
+    else {
+      const c = centreOf?.(prefer);
+      if (c) return c;
+    }
   }
   if (regionOf && chosen === use) {
     const tally = new Map<string, number>();
@@ -224,4 +236,32 @@ export function placeAmong(
     wx += p[0] * w; wy += p[1] * w; total += w;
   }
   return total > 0 ? [wx / total, wy / total] : null;
+}
+
+/** The region a predicted style belongs to on the style map.
+ *
+ * The head names 34 styles and the map has 23 regions: the thin ones
+ * share one, because a movement that began in 1955 has nothing at all in
+ * a collection that stops at 1900. A label the corpus never uses is thin
+ * by that same measure, so it goes the same way.
+ */
+export function styleRegion(
+  layouts: Layouts, facet: Facet, style: string | null,
+): string | null {
+  if (facet !== "style" || !style) return null;
+  const facetLayout = layouts.facets.style;
+  const map = facetLayout.label_region;
+  if (!map) return style;
+  // A label the corpus never uses has no entry at all, so it falls to the
+  // region the thin ones share. That name comes from the bundle rather
+  // than being written down twice.
+  return map[style] ?? facetLayout.pooled_into ?? null;
+}
+
+/** Where a named region sits, for placeAmong's fallback. */
+export function regionCentres(
+  layouts: Layouts, facet: Facet,
+): (region: string) => [number, number] | null {
+  const by = new Map(layouts.facets[facet].regions.map((r) => [r.name, r.c]));
+  return (region) => by.get(region) ?? null;
 }

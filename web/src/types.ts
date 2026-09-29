@@ -42,6 +42,8 @@ export interface Layouts {
     /** Where a style label ends up once the thin ones are pooled.
      *  Twelve of the 34 the head can name have no region of their own. */
     label_region?: Record<string, string>;
+    /** The region the thin style labels share. */
+    pooled_into?: string | null;
   }>;
 }
 

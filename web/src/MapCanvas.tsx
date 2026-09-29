@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildFields } from "./regionFields";
 import type { Bundle } from "./useData";
-import type { Facet, Layouts } from "./types";
+import type { Facet } from "./types";
 import { ImageCache, TIER2_MIN_PX } from "./imageCache";
 import { HiResAtlas } from "./hiresAtlas";
-import { placeAmong } from "./compare";
+import { placeAmong, regionCentres, styleRegion } from "./compare";
 import texSimilarity from "./tex/similarity.png";
 import texPeriod from "./tex/period.png";
 import texCountry from "./tex/country.png";
@@ -146,16 +146,6 @@ function buildGrid(pts: Float32Array): Grid | null {
   const cursor = start.slice(0, nx * ny);
   for (let i = 0; i < n; i++) items[cursor[cellOf(i)]++] = i;
   return { x0, y0, cw, ch, nx, ny, start, items };
-}
-
-/** The region a predicted style belongs to. Thin labels share one, and a
- *  label the corpus never uses at all is thin by definition, so it goes
- *  the same way. */
-function styleRegion(layouts: Layouts, style: string | null): string | null {
-  if (!style) return null;
-  const map = layouts.facets.style.label_region;
-  if (!map) return style;
-  return map[style] ?? map["Other styles"] ?? null;
 }
 
 /** Ray casting, in the map's own 0..1 space so no per-frame screen copy
@@ -746,7 +736,8 @@ export function MapCanvas({
           // raw, the name matched no region, the neighbours were fallen
           // back on, and the map put a picture called Social Realism in
           // Romanticism.
-          facet === "style" ? styleRegion(layouts, p.style) : null,
+          styleRegion(layouts, facet, p.style),
+          regionCentres(layouts, facet),
         );
         if (!at) continue;
         const x = (at[0] - vx) * s + cx;

@@ -1,7 +1,8 @@
 import { useCallback, useRef, useState } from "react";
 import type { Bundle } from "./useData";
 import type { CompareResult } from "./compare";
-import { Comparer, placeAmong } from "./compare";
+import { Comparer, placeAmong, regionCentres, styleRegion }
+  from "./compare";
 import type { Facet } from "./types";
 
 const comparer = new Comparer();
@@ -43,11 +44,16 @@ export function Compare({
       stage("Looking…");
       const res = await comparer.compare(file);
       onPin({ url, result: res });
+      // The same rule the map draws the picture with. Aimed without it,
+      // the flight went to where the neighbours are while the pin was
+      // drawn where the style says, and the two were different places.
       const layout = bundle.layouts.facets[facet];
       const at = placeAmong(
         res.matches,
         (i) => (layout.xy[i] ?? null),
         layout.region_of?.length ? layout.region_of : null,
+        styleRegion(bundle.layouts, facet, res.style?.label ?? null),
+        regionCentres(bundle.layouts, facet),
       );
       if (at) onFocus(at[0], at[1]);
       stage("");
