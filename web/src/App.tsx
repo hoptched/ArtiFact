@@ -6,6 +6,7 @@ import { Detail } from "./Detail";
 import { Compare } from "./Compare";
 import { OwnDetail } from "./OwnDetail";
 import { About } from "./About";
+import { Logo } from "./Logo";
 import { useBundle } from "./useData";
 import type { Facet } from "./types";
 
@@ -97,7 +98,7 @@ export default function App() {
     <div className="app">
       <aside className="sidebar">
         <header>
-          <h1>Minerva</h1>
+          <h1><Logo /></h1>
           <p>
             A collection of {bundle.works.length.toLocaleString()}{" "}
             public-domain works from the Art Institute of Chicago.

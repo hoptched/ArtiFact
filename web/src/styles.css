@@ -83,14 +83,16 @@ body {
 .sidebar > *,
 .detail > * { position: relative; }
 
-/* The one thing still set in the display face. */
+/* The wordmark is artwork now, so the heading is only a box for it. */
 .sidebar header h1 {
   margin: 0;
-  font-family: var(--font-display);
-  font-size: 1.9rem;
-  font-weight: 600;
-  letter-spacing: 0.015em;
-  line-height: 1.1;
+  line-height: 0;
+  color: var(--ink);
+}
+.logo {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 .sidebar header p {
   margin: 8px 0 0;
