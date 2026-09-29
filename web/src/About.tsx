@@ -26,10 +26,10 @@ export function About({ works }: { works: number }) {
         // being clipped to the column the link sits in.
         <div className="about-backdrop" onClick={() => setOpen(false)}>
           <div className="about" onClick={(e) => e.stopPropagation()}
-               role="dialog" aria-label="About ArtiFact">
+               role="dialog" aria-label="About Minerva">
             <button className="close" onClick={() => setOpen(false)}
                     aria-label="Close">×</button>
-            <h2>ArtiFact</h2>
+            <h2>Minerva</h2>
 
             <p>
               {works.toLocaleString()} public-domain works from the Art

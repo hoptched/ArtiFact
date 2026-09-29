@@ -97,7 +97,7 @@ export default function App() {
     <div className="app">
       <aside className="sidebar">
         <header>
-          <h1>ArtiFact</h1>
+          <h1>Minerva</h1>
           <p>
             A collection of {bundle.works.length.toLocaleString()}{" "}
             public-domain works from the Art Institute of Chicago.
