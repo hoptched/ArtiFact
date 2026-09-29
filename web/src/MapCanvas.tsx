@@ -33,6 +33,11 @@ const GROUND_ALPHA = 0.05;
  *  pattern rather than by resampling the files, so the tiles keep their
  *  full resolution and this stays one number to turn. */
 const GROUND_SCALE = 0.5;
+/** How far the ground slides for a map unit of pan, in CSS pixels, held
+ *  apart from the view's own scale. Roughly half the rate the works move
+ *  at when the map is fitted, so the surface reads as underneath them
+ *  rather than stuck to them. Zero would pin it to the viewport again. */
+const GROUND_PAN = 500;
 
 interface View { x: number; y: number; scale: number }
 
@@ -476,10 +481,12 @@ export function MapCanvas({
       // they were laid on it, and the extra tile is what the blit walks
       // into rather than running out of canvas at the edge.
       //
-      // Panning only. Tied to the zoom as well, one swirl would fill the
-      // screen at the far end and be a grain of dust at the other; the
-      // pattern is the surface the map is drawn on, not a thing on the
-      // map with a size of its own.
+      // Panning only, and at a rate of its own rather than the map's.
+      // Taking the offset from the live scale meant zooming dragged the
+      // ground across the screen: at the far end a pixel of pan is a
+      // millionth of a map unit, so the pattern tore past while the
+      // works barely moved. A fixed rate keeps it a surface the map
+      // slides over, which is all it was ever meant to be.
       const ground = groundRef.current[facet];
       const tpx = ground ? ground.naturalWidth * dpr * GROUND_SCALE : 0;
       const tpy = ground ? ground.naturalHeight * dpr * GROUND_SCALE : 0;
@@ -512,10 +519,11 @@ export function MapCanvas({
         // Where the map's own origin falls on screen, wrapped to one
         // tile, so the offset stays small however far anyone has gone.
         const wrap = (v: number, t: number) => ((v % t) + t) % t;
+        const rate = GROUND_PAN * dpr;
         ctx.drawImage(
           ready.canvas,
-          wrap(-vx * s + cx, tpx) - tpx,
-          wrap(-vy * s + cy, tpy) - tpy,
+          wrap(-vx * rate, tpx) - tpx,
+          wrap(-vy * rate, tpy) - tpy,
         );
       } else {
         ctx.fillStyle = "#0d0d0f";
