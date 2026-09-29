@@ -197,8 +197,30 @@ body {
     0 0 7px 1px rgba(61, 220, 74, 0.55);
 }
 
-/* Not a toggle and not in a tray: it does the travel on press only. */
-.sidebar .reset { width: 100%; }
+/* Not a toggle and not in a tray, so it should not carry the weight of
+   one. Sized as the secondary thing it is: as wide as its label, with a
+   shallower side to match, and it travels only while held. */
+.sidebar .reset {
+  width: auto;
+  flex: 0 0 auto;
+  align-self: flex-start;
+  font-size: 0.68rem;
+  padding: 4px 9px;
+  border-radius: 5px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.13),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.4),
+    0 3px 0 var(--key-side),
+    0 4px 3px rgba(0, 0, 0, 0.55);
+}
+.sidebar .reset:active {
+  top: 2px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.4),
+    0 1px 0 var(--key-side),
+    0 2px 2px rgba(0, 0, 0, 0.55);
+}
 
 .stage { position: relative; flex: 1 1 auto; min-width: 0; }
 
