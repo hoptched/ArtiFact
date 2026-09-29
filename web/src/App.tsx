@@ -164,7 +164,7 @@ export default function App() {
                 and loose letters would each be spaced by it. */}
             <span className="neon">
               {"Surprise me".split("").map((ch, i) => (
-                <span key={i} style={{ animationDelay: `${i * 0.1}s` }}>
+                <span key={i} style={{ animationDelay: `${i * 0.067}s` }}>
                   {ch === " " ? "\u00a0" : ch}
                 </span>
               ))}

@@ -581,15 +581,17 @@ dd { margin: 0; font-size: 0.85rem; }
 }
 .neon span {
   display: inline-block;
-  animation: neon 8s linear infinite;
+  animation: neon 5.3s linear infinite;
   text-shadow: 0 0 7px currentColor;
 }
-/* Each letter runs a tenth of a second behind the one to its left, so
-   the colour arrives at the S first and reaches the end of the word last.
+/* Each letter runs a fifteenth of a second behind the one to its left,
+   so the colour arrives at the S first and reaches the end of the word
+   last. The delay is set with the cycle: shortening one without the
+   other stretches or bunches the wave instead of speeding it up.
    Nothing moves — every letter stays where it is and only its colour
    changes — so under a request for reduced motion the wave is kept and
    simply slowed, rather than flattened into the whole word changing at
    once. */
 @media (prefers-reduced-motion: reduce) {
-  .neon span { animation-duration: 16s; }
+  .neon span { animation-duration: 10.7s; }
 }
