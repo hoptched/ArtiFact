@@ -115,7 +115,9 @@ export default function App() {
       <aside className="sidebar">
         <header>
           <h1>
-            <a href="https://commons.wikimedia.org/wiki/File:Minerva,_by_Rembrandt_(1635).jpg#Summary"
+            {/* The picture itself rather than its catalogue page. */}
+            <a href={"https://upload.wikimedia.org/wikipedia/commons/a/aa/"
+                     + "Minerva%2C_by_Rembrandt_%281635%29.jpg"}
                target="_blank" rel="noreferrer"
                title="Minerva, by Rembrandt (1635)">
               <Logo />
